@@ -9,22 +9,17 @@ const UserSchema = new mongoose.Schema({
     google: { type: String, default: null },
     facebook: { type: String, default: null }
   },
-  role: { type: String, enum: ['admin', 'user'], default: 'user' },
+  level: { type: String, enum: ['admin', 'user'], default: 'user' },
   createdAt: { type: Date, default: Date.now },
   lastLogin: Date
 });
 
-UserSchema.methods.validPassword = function(password) {
-    const hash = crypto.pbkdf2Sync(password, Buffer.from(this.salt, 'hex'), 310000, 32, 'sha256');
-    return this.password === hash.toString('hex');
-  };
-
 UserSchema.plugin(passportLocalMongoose, {
     usernameField: 'email', // email como campo de login
-    usernameLowerCase: true, // emails em lowercase
+    /*usernameLowerCase: true, // emails em lowercase
     errorMessages: {
         UserExistsError: 'Já existe um utilizador com este email.'
-      }
+      }*/
   });
 
-module.exports = mongoose.model('User', UserSchema);
+module.exports = mongoose.model('user', UserSchema);

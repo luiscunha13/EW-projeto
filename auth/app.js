@@ -5,13 +5,13 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var mongoose = require('mongoose');
 
-var mongoDB = 'mongodb://127.0.0.1:27017/EWprojeto';
-mongoose.connect(mongoDB);
-var db = mongoose.connection;
-db.on('error', console.error.bind(console, 'Erro na Ligação ao MongoDB:'));
-db.once('open', () => console.log('Conexão ao MongoDB realizada com sucesso.'));
+var mongoDB = 'mongodb://localhost:27017/EWprojeto';
+mongoose.connect(mongoDB)
+var connection = mongoose.connection
+connection.on('error', console.error.bind(console, 'Erro na conexão ao MongoDB'))
+connection.once('open', () => console.log('Conexão ao MongoDB realizada com sucesso'))
 
-var indexRouter = require('./routes/index');
+var usersRouter = require('./routes/users')
 
 var app = express();
 
@@ -25,7 +25,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', indexRouter);
+app.use('/', usersRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

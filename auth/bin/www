@@ -1,20 +1,22 @@
 #!/usr/bin/env node
 
+//Load .env config
+require('dotenv').config();
+
 /**
  * Module dependencies.
- */
+*/
 
 var app = require('../app');
-var debug = require('debug')('backend:server');
+var debug = require('debug')('auth:server');
 var http = require('http');
 
 /**
  * Get port from environment and store in Express.
  */
 
-var port = normalizePort(process.env.PORT || '14000');
+var port = normalizePort(process.env.PORT || '13000');
 app.set('port', port);
-
 /**
  * Create HTTP server.
  */
@@ -82,5 +84,5 @@ function onError(error) {
  */
 
 function onListening() {
-  console.log('Server running on http://localhost:' + port);
+  console.log('Auth server running on http://localhost:' + port);
 }

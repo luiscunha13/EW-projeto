@@ -1,17 +1,21 @@
 const express = require('express');
+const router = express.Router();
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const FacebookStrategy = require('passport-facebook').Strategy;
 const crypto = require('crypto');
-const User = require('../models/User'); 
-const router = express.Router();
+var jwt = require('jsonwebtoken');
+var auth = require('../auth/auth');
+const User = require('../models/user');
+var UserController = require('../controllers/user'); 
+
 
 // Estratégia Local (username/password)
 passport.use(new LocalStrategy(
   { usernameField: 'email' }, // email como username
   function(email, password, cb) {
-    User.findOne({ email: email }, function(err, user) {
+    UserController.findOne({ email: email }, function(err, user) {
       if (err) { return cb(err); }
       if (!user) { 
         return cb(null, false, { message: 'Não existe nenhuma conta associada a esse email.' }); 
@@ -32,7 +36,7 @@ passport.use(new GoogleStrategy({
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
   callbackURL: '/auth/google/callback'
 }, function(accessToken, refreshToken, profile, cb) {
-  User.findOne({ 'authMethods.google': profile.id }, function(err, user) {
+  UserController.findOne({ 'authMethods.google': profile.id }, function(err, user) {
     if (err) { return cb(err); }
     
     if (!user) {
@@ -55,13 +59,13 @@ passport.use(new GoogleStrategy({
 }));
 
 // Estratégia Facebook
-passport.use(new FacebookStrategy({
+/*passport.use(new FacebookStrategy({
   clientID: process.env.FACEBOOK_APP_ID,
   clientSecret: process.env.FACEBOOK_APP_SECRET,
   callbackURL: '/auth/facebook/callback',
   profileFields: ['id', 'emails', 'name']
 }, function(accessToken, refreshToken, profile, cb) {
-  User.findOne({ 'authMethods.facebook': profile.id }, function(err, user) {
+  UserController.findOne({ 'authMethods.facebook': profile.id }, function(err, user) {
     if (err) { return cb(err); }
     
     if (!user) {
@@ -81,7 +85,7 @@ passport.use(new FacebookStrategy({
       return cb(null, user);
     }
   });
-}));
+}));*/
 
 // Serialização/Desserialização do usuário
 passport.serializeUser(function(user, cb) {
@@ -111,30 +115,25 @@ router.get('/login/google', passport.authenticate('google', {
   scope: ['profile', 'email']
 }));
 
-router.get('/login/facebook', passport.authenticate('facebook', {
+/*router.get('/login/facebook', passport.authenticate('facebook', {
   scope: ['email']
-}));
+}));*/
 
-router.get('/google/callback', passport.authenticate('google', {
+router.get('/auth/google/callback', passport.authenticate('google', {
   successRedirect: '/',
   failureRedirect: '/login'
 }));
 
-router.get('/facebook/callback', passport.authenticate('facebook', {
+/*router.get('/auth/facebook/callback', passport.authenticate('facebook', {
   successRedirect: '/',
   failureRedirect: '/login'
-}));
+}));*/  
 
 router.post('/logout', function(req, res, next) {
   req.logout(function(err) {
     if (err) { return next(err); }
     res.redirect('/');
   });
-});
-
-// Rota de Registro
-router.get('/signup', function(req, res, next) {
-  res.render('signup');
 });
 
 router.post('/signup', function(req, res, next) {
@@ -167,6 +166,40 @@ router.post('/signup', function(req, res, next) {
   });
 });
 
+//DOS storees ver o que da para tirar daqui
+router.post('/register', auth.validate, function(req, res) {
+  const d = new Date().toISOString().substring(0, 19);
+  const newUser = new User({
+    username: req.body.username,
+    name: req.body.name,
+    level: req.body.level,
+    active: true,
+    dateCreated: d
+  });
+
+  User.register(newUser, req.body.password, function(err, user) {
+    if (err) {
+      res.jsonp({ error: err, message: "Register error: " + err });
+    } else {
+      passport.authenticate("local")(req, res, function() {
+        jwt.sign(
+          {
+            username: req.user.username,
+            level: req.user.level,
+            sub: 'aula de EngWeb2023'
+          },
+          "EngWeb2023",
+          { expiresIn: 3600 },
+          function(e, token) {
+            if (e) res.status(500).jsonp({ error: "Erro na geração do token: " + e });
+            else res.status(201).jsonp({ token: token });
+          }
+        );
+      });
+    }
+  });
+});
+
 // Middleware para verificar autenticação
 function isAuthenticated(req, res, next) {
   if (req.isAuthenticated()) {
@@ -182,5 +215,27 @@ function isAdmin(req, res, next) {
   }
   res.status(403).send('Access denied');
 }
+
+
+/*PARTE DE DADOS*/
+// Obter lista de utilizadores
+router.get('/users', auth.validate, (req, res) => {
+  UserController.list().then(users => {
+    res.status(200).json(users);
+  })
+  .catch(err => {
+    res.status(500).json(err);
+  });
+});
+
+// Obter utilizador por ID
+router.get('/users/:id', auth.validate, (req, res) => {
+  UserController.getUser(req.params.id).then(user => {
+    res.status(200).json(user);
+  })
+  .catch(err => {
+    res.status(500).json(err);
+  });
+});
 
 module.exports = router;
