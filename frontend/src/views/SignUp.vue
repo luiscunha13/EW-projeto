@@ -1,7 +1,7 @@
 <template>
   <div class="signup-container">
     <div class="card">
-      <h2>Create Account</h2>
+      <h2>EuBit</h2>
       <form @submit.prevent="handleSignup">
         <div class="input-group">
           <input v-model="username" type="text" placeholder="Username" required>
@@ -15,11 +15,7 @@
         <button type="submit" class="btn-primary">Sign Up</button>
       </form>
 
-      <div class="divider">
-        <span>or</span>
-      </div>
-
-      <p class="text-center">Already have an account? <router-link to="/" class="link">Log in</router-link></p>
+      <p class="text-center">Already have an account? <router-link to="/login" class="link">Log in</router-link></p>
     </div>
   </div>
 </template>
@@ -38,7 +34,7 @@ const authStore = useAuthStore();
 const handleSignup = async () => {
   try {
     await authStore.signup(username.value, email.value, password.value);
-    router.push('/');
+    router.push('/login');
   } catch (error) {
     console.error('Registration error:', error);
   }
@@ -64,14 +60,14 @@ const handleSignup = async () => {
   border-radius: 16px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
   width: 100%;
-  max-width: 600px;
+  max-width: 400px;
 }
 
 h2 {
   color: #111;
   text-align: center;
   margin-bottom: 40px;
-  font-size: 40px;
+  font-size: 35px;
   font-weight: 600;
   letter-spacing: -0.5px;
 }
@@ -82,12 +78,13 @@ h2 {
 
 input {
   width: 100%;
+  height: 50px;
   padding: 16px 20px;
   border: 2px solid #eaeaea;
   border-radius: 12px;
-  font-size: 20px;
+  font-size: 15px;
   transition: all 0.3s;
-  height: 56px;
+  height: 50px;
   box-sizing: border-box;
 }
 
@@ -104,7 +101,7 @@ input:focus {
   color: white;
   border: none;
   border-radius: 12px;
-  font-size: 20px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.3s;
@@ -114,33 +111,11 @@ input:focus {
   background-color: #000;
 }
 
-.divider {
-  display: flex;
-  align-items: center;
-  margin: 30px 0;
-  color: #999;
-  font-size: 20px;
-}
-
-.divider::before, .divider::after {
-  content: "";
-  flex: 1;
-  border-bottom: 1px solid #eaeaea;
-}
-
-.divider::before {
-  margin-right: 16px;
-}
-
-.divider::after {
-  margin-left: 16px;
-}
-
 .text-center {
   text-align: center;
   color: #666;
   margin-top: 24px;
-  font-size: 20px;
+  font-size: 15px;
 }
 
 .link {

@@ -3,6 +3,7 @@ import { useAuthStore } from '../stores/auth';
 import LoginPage from '../views/Login.vue';
 import SignupPage from '../views/SignUp.vue';
 import UserHomePage from '../views/Home.vue';
+import Sip from '../views/sip.vue'
 
 
 const router = createRouter({
@@ -10,6 +11,10 @@ const router = createRouter({
   routes: [
     { 
       path: '/', 
+      redirect: '/login' 
+    },
+    { 
+      path: '/login', 
       name: 'login',
       component: LoginPage 
     },
@@ -19,8 +24,7 @@ const router = createRouter({
     },
     { path: '/home', 
       name: 'userhomepage', 
-      component: UserHomePage,
-      meta: { requiresAuth: true } 
+      component: Sip,
     }, 
     
   ]

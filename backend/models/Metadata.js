@@ -10,7 +10,7 @@ const MetadataSchema = new mongoose.Schema({
   resourceType: { 
     type: String, 
     required: true,
-    enum: ['desporto', 'académico', 'familiar', 'viagem', 'trabalho', 'pessoal', 'outro']
+    enum: ['desporto', 'académico', 'familiar', 'viagem', 'trabalho', 'pessoal', 'entretenimento', 'outro']
   },
   description: String,
   tags: [String]
