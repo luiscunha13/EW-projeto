@@ -28,13 +28,11 @@ import { useAuthStore } from '@/stores/auth';
 const username = ref('');
 const email = ref('');
 const password = ref('');
-const router = useRouter();
 const authStore = useAuthStore();
 
 const handleSignup = async () => {
   try {
-    await authStore.signup(username.value, email.value, password.value);
-    router.push('/login');
+    await authStore.register(username.value, email.value, password.value);
   } catch (error) {
     console.error('Registration error:', error);
   }

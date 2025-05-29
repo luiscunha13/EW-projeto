@@ -1,14 +1,15 @@
 // src/stores/auth.js
 import { defineStore } from 'pinia';
 import { authService } from '../services/auth';
+import router from '../router';
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: null,
+    token: null,
     role: null,
     isLoading: false,
-    error: null,
-    returnUrl: null
+    error: null
   }),
   
   getters: {
@@ -23,10 +24,10 @@ export const useAuthStore = defineStore('auth', {
       this.error = null;
       
       try {
-        const userData = await authService.login(email, password);
-        this.user = userData.user;
-        localStorage.setItem('user', JSON.stringify(userData.user));
-        this.router.push(this.returnUrl || '/');
+        const data = await authService.login(email, password);
+        this.token = data.token;
+        this.user = this.decodeToken(data.token);
+        this.router.push('/home');
       } catch (error) {
         this.error = error.message;
         throw error;
@@ -35,15 +36,15 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    async signup(username, email, password) {
+    async register(username, email, password) {
       this.isLoading = true;
       this.error = null;
       
       try {
-        const userData = await authService.signup(username, email, password);
-        this.user = userData.user;
-        localStorage.setItem('user', JSON.stringify(userData.user));
-        this.router.push('/');
+        const data = await authService.register(username, email, password);
+        this.token = data.token;
+        this.user = this.decodeToken(data.token);
+        this.router.push('/login');
       } catch (error) {
         this.error = error.message;
         throw error;
@@ -52,39 +53,30 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    async logout() {
+    decodeToken(token) {
       try {
-        await authService.logout();
-        this.user = null;
-        this.role = null;
-        localStorage.removeItem('user');
-        this.router.push('/login');
-      } catch (error) {
-        this.error = error.message;
-        throw error;
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        return JSON.parse(atob(base64));
+      } catch (e) {
+        return null;
       }
     },
 
-    initialize(router) {
-      // Store router instance for navigation
-      this.router = router;
-      
-      // Check for saved user
-      const user = localStorage.getItem('user');
-      if (user) {
-        try {
-          this.user = JSON.parse(user);
-        } catch (e) {
-          localStorage.removeItem('user');
-        }
+    async logout() {
+      await authService.logout();
+      this.user = null;
+      this.role = null;
+      this.router.push('/login');
+    },
+
+    initialize() {
+      const token = localStorage.getItem('token');
+      if (token) {
+        this.token = token;
+        this.user = this.decodeToken(token);
       }
-      
-      // Check for return URL
-      const returnUrl = localStorage.getItem('returnUrl');
-      if (returnUrl) {
-        this.returnUrl = returnUrl;
-        localStorage.removeItem('returnUrl');
-      }
+      authService.setupAxiosInterceptors();
     },
 
     // Social login redirects

@@ -16,10 +16,10 @@ const UserSchema = new mongoose.Schema({
 
 UserSchema.plugin(passportLocalMongoose, {
     usernameField: 'email', // email como campo de login
-    /*usernameLowerCase: true, // emails em lowercase
+    usernameLowerCase: true, // emails em lowercase
     errorMessages: {
         UserExistsError: 'Já existe um utilizador com este email.'
-      }*/
+      }
   });
 
 module.exports = mongoose.model('user', UserSchema);

@@ -2,20 +2,25 @@ const express = require('express');
 const router = express.Router();
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
+//const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const FacebookStrategy = require('passport-facebook').Strategy;
 const crypto = require('crypto');
+const cors = require('cors');
 var jwt = require('jsonwebtoken');
 var auth = require('../auth/auth');
 const User = require('../models/user');
 var UserController = require('../controllers/user'); 
 
+router.use(cors({
+  origin: 'http://localhost:5173', 
+  credentials: true
+}));
 
 // Estratégia Local (username/password)
 passport.use(new LocalStrategy(
   { usernameField: 'email' }, // email como username
   function(email, password, cb) {
-    UserController.findOne({ email: email }, function(err, user) {
+    UserController.getUser({ email: email }, function(err, user) {
       if (err) { return cb(err); }
       if (!user) { 
         return cb(null, false, { message: 'Não existe nenhuma conta associada a esse email.' }); 
@@ -31,12 +36,13 @@ passport.use(new LocalStrategy(
 ));
 
 // Estratégia Google
+/*
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
   callbackURL: '/auth/google/callback'
 }, function(accessToken, refreshToken, profile, cb) {
-  UserController.findOne({ 'authMethods.google': profile.id }, function(err, user) {
+  UserController.getUser({ 'authMethods.google': profile.id }, function(err, user) {
     if (err) { return cb(err); }
     
     if (!user) {
@@ -57,7 +63,7 @@ passport.use(new GoogleStrategy({
     }
   });
 }));
-
+*/
 // Estratégia Facebook
 /*passport.use(new FacebookStrategy({
   clientID: process.env.FACEBOOK_APP_ID,
@@ -105,11 +111,28 @@ router.get('/login', function(req, res, next) {
   res.render('login');
 });
 
-router.post('/login/password', passport.authenticate('local', {
-  successRedirect: '/',
-  failureRedirect: '/login',
-  failureFlash: true
-}));
+router.post('/login/local', function(req, res, next) {
+  passport.authenticate('local', (err, user, info) => {
+    if (err) return res.status(500).json({ error: err });
+    if (!user) return res.status(401).json({ error: info.message });
+    
+    // Generate JWT token
+    jwt.sign(
+      {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role
+      },
+      "EngWeb2025", // Use an environment variable in production
+      { expiresIn: '1h' },
+      function(e, token) {
+        if (e) return res.status(500).json({ error: "Token generation error" });
+        res.json({ token });
+      }
+    );
+  })(req, res, next);
+});
 
 router.get('/login/google', passport.authenticate('google', {
   scope: ['profile', 'email']
@@ -136,67 +159,46 @@ router.post('/logout', function(req, res, next) {
   });
 });
 
-router.post('/signup', function(req, res, next) {
+router.post('/register', function(req, res) {
+  const { username, email, password } = req.body;
+  
   // Gerar salt e hash da senha
   const salt = crypto.randomBytes(16);
-  crypto.pbkdf2(req.body.password, salt, 310000, 32, 'sha256', function(err, hashedPassword) {
-    if (err) { return next(err); }
+  crypto.pbkdf2(password, salt, 310000, 32, 'sha256', function(err, hashedPassword) {
+    if (err) { return res.status(500).json({ error: err }); }
     
     const newUser = new User({
-      username: req.body.username,
-      email: req.body.email,
+      username: username,
+      email: email,
       password: hashedPassword.toString('hex'),
       salt: salt.toString('hex'),
       role: 'user'
     });
     
-    newUser.save(function(err) {
+    newUser.save(function(err, user) {
       if (err) {
-        if (err.code === 11000) { // Erro de duplicação no MongoDB
-          return res.redirect('/signup?error=email_exists');
+        if (err.code === 11000) {
+          return res.status(400).json({ error: 'Email already exists' });
         }
-        return next(err);
+        return res.status(500).json({ error: err });
       }
       
-      req.login(newUser, function(err) {
-        if (err) { return next(err); }
-        res.redirect('/');
-      });
+      // Generate JWT token
+      jwt.sign(
+        {
+          id: user._id,
+          username: user.username,
+          email: user.email,
+          role: user.role
+        },
+        "EngWeb2025", // Use an environment variable in production
+        { expiresIn: '1h' },
+        function(e, token) {
+          if (e) return res.status(500).json({ error: "Token generation error" });
+          res.status(201).json({ token });
+        }
+      );
     });
-  });
-});
-
-//DOS storees ver o que da para tirar daqui
-router.post('/register', auth.validate, function(req, res) {
-  const d = new Date().toISOString().substring(0, 19);
-  const newUser = new User({
-    username: req.body.username,
-    name: req.body.name,
-    level: req.body.level,
-    active: true,
-    dateCreated: d
-  });
-
-  User.register(newUser, req.body.password, function(err, user) {
-    if (err) {
-      res.jsonp({ error: err, message: "Register error: " + err });
-    } else {
-      passport.authenticate("local")(req, res, function() {
-        jwt.sign(
-          {
-            username: req.user.username,
-            level: req.user.level,
-            sub: 'aula de EngWeb2023'
-          },
-          "EngWeb2023",
-          { expiresIn: 3600 },
-          function(e, token) {
-            if (e) res.status(500).jsonp({ error: "Erro na geração do token: " + e });
-            else res.status(201).jsonp({ token: token });
-          }
-        );
-      });
-    }
   });
 });
 

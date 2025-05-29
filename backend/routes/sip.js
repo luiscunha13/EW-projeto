@@ -18,7 +18,7 @@ router.post('/api/ingest', upload.single('sip'), async (req, res) => {
         const zip = await JSZip.loadAsync(zipData);
         const zipFiles = Object.keys(zip.files);
 
-        if (!zipFiles.includes('manifest-SIP.json')) {
+        if (!zipFiles.includes('manifesto-SIP.json')) {
             return res.status(400).json({ error: 'Manifest file not found in SIP' });
         }
 

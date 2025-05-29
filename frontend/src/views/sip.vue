@@ -262,7 +262,7 @@
                 }
 
                 // Add manifest to ZIP
-                zip.file('manifest-SIP.json', JSON.stringify(manifest, null, 2));
+                zip.file('manifesto-SIP.json', JSON.stringify(manifest, null, 2));
 
                 // Generate and send/download ZIP
                 const zipBlob = await zip.generateAsync({ type: 'blob' });
