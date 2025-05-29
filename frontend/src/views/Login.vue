@@ -10,8 +10,8 @@
           <input v-model="password" type="password" placeholder="Password" required>
         </div>
         <div v-if="errorMessage" class="error-message">
-        {{ errorMessage }}
-      </div>
+          {{ errorMessage }}
+        </div>
         <button type="submit" class="btn-primary">Log In</button>
       </form>
 
@@ -60,6 +60,9 @@ const handleLogin = async () => {
     if (!result.success) {
       errorMessage.value = result.error;
       console.error('Login failed:', result.error);
+    }
+    else{
+      router.push('/home');
     }
   } catch (error) {
     errorMessage.value = error.message || 'An unexpected error occurred. Please try again.';

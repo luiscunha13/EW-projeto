@@ -20,11 +20,11 @@ module.exports.getUserbyEmail = function(email, callback) {
         .catch(err => callback(err));
 }
 
-module.exports.addUser = u => {
-    return User.create(u)
-        .then(resposta => resposta)
-        .catch(erro => erro);
-};
+module.exports.getUserbyUsername = function(username, callback) {
+    User.findOne({username: username}).exec()
+        .then(user => callback(null, user))
+        .catch(err => callback(err));
+}
 
 module.exports.updateUser = (id, info) => {
     return User.updateOne({ _id: id }, info)

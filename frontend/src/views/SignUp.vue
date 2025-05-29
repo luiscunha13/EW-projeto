@@ -12,6 +12,9 @@
         <div class="input-group">
           <input v-model="password" type="password" placeholder="Password" required>
         </div>
+        <div v-if="errorMessage" class="error-message">
+          {{ errorMessage }}
+        </div>
         <button type="submit" class="btn-primary">Sign Up</button>
       </form>
 
@@ -28,13 +31,25 @@ import { useAuthStore } from '@/stores/auth';
 const username = ref('');
 const email = ref('');
 const password = ref('');
+const errorMessage = ref('');
 const authStore = useAuthStore();
+const router = useRouter();
 
 const handleSignup = async () => {
+  errorMessage.value = '';
   try {
-    await authStore.register(username.value, email.value, password.value);
+    const result = await authStore.register(username.value, email.value, password.value);
+
+    if (!result.success) {
+      errorMessage.value = result.error;
+      console.error('Login failed:', result.error);
+    }
+    else{
+      router.push('/login');
+    }
   } catch (error) {
-    console.error('Registration error:', error);
+    errorMessage.value = error.message || 'An unexpected error occurred. Please try again.';
+    console.error('Signup error:', error);
   }
 };
 </script>
@@ -90,6 +105,18 @@ input:focus {
   outline: none;
   border-color: #111;
   box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.05);
+}
+
+.error-message {
+  color: #dc3545;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  text-align: center;
+  animation: fadeIn 0.3s ease-in-out;
 }
 
 .btn-primary {

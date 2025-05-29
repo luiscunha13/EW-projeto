@@ -130,7 +130,7 @@ router.post('/login/local', function(req, res, next) {
         email: user.email,
         role: user.role
       },
-      "EngWeb2025", // Use an environment variable in production
+      "EngWeb2025", 
       { expiresIn: '1h' },
       function(e, token) {
         if (e) return res.status(500).json({ error: "Token generation error" });
@@ -165,47 +165,65 @@ router.post('/logout', function(req, res, next) {
   });
 });
 
-router.post('/register', function(req, res) {
+router.post('/register', async function(req, res) {
   const { username, email, password } = req.body;
   
-  // Gerar salt e hash da senha
-  const salt = crypto.randomBytes(16);
-  crypto.pbkdf2(password, salt, 310000, 32, 'sha256', function(err, hashedPassword) {
-    if (err) { return res.status(500).json({ error: err }); }
-    
+  try {
+    const existingUserEmail = await User.findOne({ email }).exec();
+    if (existingUserEmail) {
+      return res.status(400).json({ error: 'Já existe uma conta com este email' });
+    }
+    const existingUserUname = await User.findOne({ username }).exec();
+    if (existingUserUname) {
+      return res.status(400).json({ error: 'Username indisponível' });
+    }
+
+    const salt = crypto.randomBytes(16).toString('hex');
+    console.log('Generated salt:', salt);
+    const hashedPassword = crypto.pbkdf2Sync(
+      password,
+      salt,
+      310000,
+      32,
+      'sha256'
+    ).toString('hex');
+
+    console.log('Generated salt:', salt);
+
     const newUser = new User({
-      username: username,
-      email: email,
-      password: hashedPassword.toString('hex'),
-      salt: salt.toString('hex'),
-      role: 'user'
+      username,
+      email,
+      password: hashedPassword,
+      salt,
+      role: 'user',
+      createdAt: new Date()
     });
-    
-    newUser.save(function(err, user) {
-      if (err) {
-        if (err.code === 11000) {
-          return res.status(400).json({ error: 'Email already exists' });
-        }
-        return res.status(500).json({ error: err });
-      }
-      
-      // Generate JWT token
+
+    await newUser.save();
+
+    const token = await new Promise((resolve, reject) => {
       jwt.sign(
         {
-          id: user._id,
-          username: user.username,
-          email: user.email,
-          role: user.role
+          id: newUser._id,
+          username: newUser.username,
+          email: newUser.email,
+          role: newUser.role
         },
-        "EngWeb2025", // Use an environment variable in production
+        "EngWeb2025",
         { expiresIn: '1h' },
-        function(e, token) {
-          if (e) return res.status(500).json({ error: "Token generation error" });
-          res.status(201).json({ token });
+        (e, token) => {
+          if (e) reject(e);
+          else resolve(token);
         }
       );
     });
-  });
+
+    res.status(201).json({ token });
+    
+  } catch (err) {
+    console.error('Registration error:', err);
+    res.status(500).json({ error: 'Registration failed' });
+  }
 });
 
 // Middleware para verificar autenticação

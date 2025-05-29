@@ -1,7 +1,6 @@
 // src/stores/auth.js
 import { defineStore } from 'pinia';
 import { authService } from '../services/auth';
-import router from '../router';
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -27,7 +26,6 @@ export const useAuthStore = defineStore('auth', {
         const data = await authService.login(email, password);
         this.token = data.token;
         this.user = this.decodeToken(data.token);
-        this.router.push('/home');
         return { success: true };
       } catch (error) {
         this.error = error.message;
@@ -45,10 +43,10 @@ export const useAuthStore = defineStore('auth', {
         const data = await authService.register(username, email, password);
         this.token = data.token;
         this.user = this.decodeToken(data.token);
-        this.router.push('/login');
+        return { success: true };
       } catch (error) {
         this.error = error.message;
-        throw error;
+        return { success: false, error: error.message };
       } finally {
         this.isLoading = false;
       }
@@ -68,7 +66,6 @@ export const useAuthStore = defineStore('auth', {
       await authService.logout();
       this.user = null;
       this.role = null;
-      this.router.push('/login');
     },
 
     initialize() {

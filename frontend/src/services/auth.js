@@ -29,10 +29,19 @@ export const authService = {
   async register(username, email, password) {
     try {
       const response = await axios.post(`${API_URL}/register`, { username, email, password });
+
+      if (!response.data.token) {
+        throw new Error('Authentication failed - no token received');
+      }
+
       localStorage.setItem('token', response.data.token);
       return response.data;
     } catch (error) {
-      throw error.response?.data?.message || error.message || 'Registration failed';
+      const errorMessage = error.response?.data?.error || 
+                         error.response?.data?.message || 
+                         error.message || 
+                         'Signup failed';
+      throw new Error(errorMessage);
     }
   },
 
