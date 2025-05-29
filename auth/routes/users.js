@@ -12,7 +12,9 @@ const User = require('../models/user');
 var UserController = require('../controllers/user'); 
 
 router.use(cors({
-  origin: 'http://localhost:5173', 
+  origin: 'http://localhost:5173',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
 
@@ -20,14 +22,18 @@ router.use(cors({
 passport.use(new LocalStrategy(
   { usernameField: 'email' }, // email como username
   function(email, password, cb) {
-    UserController.getUser({ email: email }, function(err, user) {
-      if (err) { return cb(err); }
+    UserController.getUserbyEmail(email , function(err, user) {
+      if (err) { 
+        console.error('Error fetching user with email:', email, err)
+        return cb(err); }
       if (!user) { 
-        return cb(null, false, { message: 'Não existe nenhuma conta associada a esse email.' }); 
+        console.log(`No user found with email: ${email}`);
+        return cb(null, false, { message: 'Não existe nenhuma conta associada a esse email' }); 
       }
       
       if (!user.validPassword(password)) {
-        return cb(null, false, { message: 'Email ou password incorreto.' });
+        console.log(`Invalid password for user with email: ${email}`);
+        return cb(null, false, { message: 'Email ou password incorreto' });
       }
       
       return cb(null, user);

@@ -9,8 +9,13 @@
         <div class="input-group">
           <input v-model="password" type="password" placeholder="Password" required>
         </div>
+        <div v-if="errorMessage" class="error-message">
+        {{ errorMessage }}
+      </div>
         <button type="submit" class="btn-primary">Log In</button>
       </form>
+
+      
 
       <div class="divider">
         <span>or</span>
@@ -36,20 +41,28 @@ import { useAuthStore } from '../stores/auth';
 
 const email = ref('');
 const password = ref('');
+const errorMessage = ref('');
 const router = useRouter();
 const authStore = useAuthStore();
 
 authStore.initialize(router);
 
 const handleLogin = async () => {
+  errorMessage.value = '';
   if (email.value === '1@1' && password.value === '1') {
     console.log('Bypassing login with test credentials');
     router.push('/home');
     return;
   }
   try {
-    await authStore.login(email.value, password.value);
+    const result = await authStore.login(email.value, password.value);
+
+    if (!result.success) {
+      errorMessage.value = result.error;
+      console.error('Login failed:', result.error);
+    }
   } catch (error) {
+    errorMessage.value = error.message || 'An unexpected error occurred. Please try again.';
     console.error('Login error:', error);
   }
 };
@@ -112,6 +125,23 @@ input:focus {
   outline: none;
   border-color: #111;
   box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.05);
+}
+
+.error-message {
+  color: #dc3545;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  text-align: center;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .btn-primary {

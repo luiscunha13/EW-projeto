@@ -9,10 +9,16 @@ module.exports.list = () => {
 };
 
 module.exports.getUser = id => {
-    return User.findOne({ _id: id })
+    return User.findById({ _id: id })
         .then(resposta => resposta)
         .catch(erro => erro);
 };
+
+module.exports.getUserbyEmail = function(email, callback) {
+    User.findOne({email: email}).exec()
+        .then(user => callback(null, user))
+        .catch(err => callback(err));
+}
 
 module.exports.addUser = u => {
     return User.create(u)

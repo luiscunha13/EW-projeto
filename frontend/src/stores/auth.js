@@ -28,9 +28,10 @@ export const useAuthStore = defineStore('auth', {
         this.token = data.token;
         this.user = this.decodeToken(data.token);
         this.router.push('/home');
+        return { success: true };
       } catch (error) {
         this.error = error.message;
-        throw error;
+        return { success: false, error: error.message };
       } finally {
         this.isLoading = false;
       }

@@ -7,14 +7,21 @@ export const authService = {
   // Local login (email/password)
   async login(email, password) {
     try {
-      console.log(`Logging in with email:${email} and password:${password}`);
       const response = await axios.post(`${API_URL}/login/local`, { email, password });
-      console.log('Login response:', response.data);
+      
+      if (!response.data.token) {
+        throw new Error('Authentication failed - no token received');
+      }
+      
       localStorage.setItem('token', response.data.token);
-      console.log('Login successful, token stored:', response.data.token);
       return response.data;
     } catch (error) {
-      throw error.response?.data?.message || error.message || 'Login failed';
+      // Extract the error message from the response
+      const errorMessage = error.response?.data?.error || 
+                         error.response?.data?.message || 
+                         error.message || 
+                         'Login failed';
+      throw new Error(errorMessage);
     }
   },
 
