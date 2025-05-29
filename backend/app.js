@@ -11,7 +11,9 @@ var db = mongoose.connection;
 db.on('error', console.error.bind(console, 'Erro na Ligação ao MongoDB:'));
 db.once('open', () => console.log('Conexão ao MongoDB realizada com sucesso.'));
 
-var indexRouter = require('./routes/index');
+var metadataRouter = require('./routes/metadata');
+var fileInfoRouter = require('./routes/fileInfo');
+var logsRouter = require('./routes/logs');
 
 var app = express();
 
@@ -25,7 +27,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', indexRouter);
+app.use('/metadata', metadataRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

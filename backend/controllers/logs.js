@@ -1,0 +1,1 @@
+var Logs = require('../models/logs');

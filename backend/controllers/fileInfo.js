@@ -1,0 +1,1 @@
+var FileInfo = require('../models/fileInfo');
