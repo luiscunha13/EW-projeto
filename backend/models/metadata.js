@@ -6,6 +6,12 @@ const MetadataSchema = new mongoose.Schema({
   creationDate: Date,
   lastModified: Date,
   title: {type: String, required: true},
+  visibility : {
+    type: String,
+    required: true,
+    enum: ['public', 'private'],
+    default: 'private'
+  },
   description: String,
   occurrenceDate: Date,
   resourceType: { 
