@@ -24,8 +24,13 @@ const router = createRouter({
     },
     { path: '/home', 
       name: 'userhomepage', 
-      component: Sip,
+      component: UserHomePage,
     }, 
+    {
+      path: '/sip',
+      name: 'sip',
+      component: Sip,
+    }
     
   ]
 });

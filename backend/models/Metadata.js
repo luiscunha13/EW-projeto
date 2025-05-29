@@ -12,8 +12,9 @@ const MetadataSchema = new mongoose.Schema({
     required: true,
     enum: ['desporto', 'académico', 'familiar', 'viagem', 'trabalho', 'pessoal', 'entretenimento', 'outro']
   },
-  description: String,
-  tags: [String]
+  originalFilename: { type: String, required: true },
+  mimeType: { type: String, required: true },
+  storageLocation: { type: String, required: true },
 });
 
 module.exports = mongoose.model('Metadata', MetadataSchema);

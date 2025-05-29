@@ -139,13 +139,12 @@
 
                     // 2. Create metadata file
                     const metadata = {
-                        title: fileItem.metadata.title,
-                        resourceType: fileItem.metadata.resourceType,
-                        description: fileItem.metadata.description,
                         creationDate: this.sipMetadata.creationDate,
                         submissionDate: new Date().toISOString(),
                         producer: this.sipMetadata.producer,
                         submitter: this.sipMetadata.submitter,
+                        title: fileItem.metadata.title,
+                        resourceType: fileItem.metadata.resourceType,
                         originalFilename: file.name,
                         mimeType: file.type,
                         size: file.size
@@ -172,7 +171,7 @@
                 }
 
                 // Add manifest to ZIP
-                zip.file('manifest-SIP.json', JSON.stringify(manifest, null, 2));
+                zip.file('manifesto-SIP.json', JSON.stringify(manifest, null, 2));
 
                 // Generate and send/download ZIP
                 const zipBlob = await zip.generateAsync({ type: 'blob' });
@@ -233,7 +232,6 @@
                     const metadata = {
                         title: fileItem.metadata.title,
                         resourceType: fileItem.metadata.resourceType,
-                        description: fileItem.metadata.description,
                         creationDate: this.sipMetadata.creationDate,
                         submissionDate: new Date().toISOString(),
                         producer: this.sipMetadata.producer,
