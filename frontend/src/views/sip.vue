@@ -60,6 +60,7 @@
   
   <script>
   import JSZip from 'jszip'; 
+  import axios from 'axios';
   import { saveAs } from 'file-saver';
   
   export default {
@@ -67,7 +68,7 @@
         return {
             sipMetadata: {
                 producer: '',
-                submitter: '',
+                submitter: 'fausto',
                 creationDate: new Date().toISOString().split('T')[0]
             },
             fileItems: [],
@@ -149,10 +150,11 @@
                         mimeType: file.type,
                         size: file.size
                     };
-
+                    
+                    const metadataContent = JSON.stringify(metadata, null, 2);
                     const metadataFileName = `${file.name}.json`;
-                    metadataFolder.file(metadataFileName, JSON.stringify(metadata, null, 2));
-                    const metadataHash = await this.calculateSHA256(new Blob([JSON.stringify(metadata)]));
+                    metadataFolder.file(metadataFileName, metadataContent);
+                    const metadataHash = await this.calculateSHA256(new Blob([metadataContent]));
 
                     // 3. Add to manifest
                     manifest.files.push({
@@ -179,10 +181,7 @@
                 // Send to backend (or download)
                 const formData = new FormData();
                 formData.append('sip', zipBlob, 'submission.zip');
-                const response = await fetch('http://localhost:3000/api/ingest', {
-                    method: 'POST',
-                    body: formData,
-                });
+                const response = await axios.post('http://localhost:14000/api/ingest', formData);
 
                 if (!response.ok) {
                     const errorData = await response.json();
@@ -241,9 +240,10 @@
                         size: file.size
                     };
 
+                    const metadataContent = JSON.stringify(metadata, null, 2);
                     const metadataFileName = `${file.name}.json`;
-                    metadataFolder.file(metadataFileName, JSON.stringify(metadata, null, 2));
-                    const metadataHash = await this.calculateSHA256(new Blob([JSON.stringify(metadata)]));
+                    metadataFolder.file(metadataFileName, metadataContent);
+                    const metadataHash = await this.calculateSHA256(new Blob([metadataContent]));
 
                     // 3. Add to manifest
                     manifest.files.push({
@@ -269,7 +269,6 @@
                 
                 saveAs(zipBlob, 'sip_inspection.zip');
                 this.successMessage = 'SIP downloaded for inspection!';
-                this.resetForm();
 
             } catch (error) {
                 this.errorMessage = error.message;

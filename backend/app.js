@@ -12,8 +12,8 @@ db.on('error', console.error.bind(console, 'Erro na Ligação ao MongoDB:'));
 db.once('open', () => console.log('Conexão ao MongoDB realizada com sucesso.'));
 
 var metadataRouter = require('./routes/metadata');
-var fileInfoRouter = require('./routes/fileInfo');
-var logsRouter = require('./routes/logs');
+var sipRouter = require('./routes/sip');
+
 
 var app = express();
 
@@ -28,6 +28,7 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/metadata', metadataRouter);
+app.use('/api', sipRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

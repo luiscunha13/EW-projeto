@@ -28,14 +28,14 @@ UserSchema.methods.validPassword = function(password) {
   
   const hash= crypto.pbkdf2Sync(
     password,
-    Buffer.from(this.salt, 'hex'),
+    this.salt,
     310000, 
     32,
     'sha256'
-  );
+  ).toString('hex');
   
   
-  return this.password === hash.toString('hex');
+  return this.password === hash;
 };
 
 module.exports = mongoose.model('user', UserSchema);
