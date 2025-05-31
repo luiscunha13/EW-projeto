@@ -34,22 +34,6 @@
         <div class="feed-header">
           <h2>Home</h2>
         </div>
-        
-        <div class="compose-post">
-          <div class="avatar">{{ userInitial }}</div>
-          <div class="compose-input">
-            <textarea 
-              v-model="newPostContent" 
-              placeholder="What's happening?" 
-              rows="3"
-            ></textarea>
-            <div class="compose-actions">
-              <button class="btn-primary" @click="createPost" :disabled="!newPostContent.trim()">
-                Post
-              </button>
-            </div>
-          </div>
-        </div>
 
         <div class="posts-container">
           <div v-for="post in posts" :key="post.id" class="post">
@@ -91,7 +75,7 @@
             <div class="user-avatar">
               <div class="avatar small">{{ getInitial(user.name) }}</div>
             </div>
-            <div class="user-info users-list-item">
+            <div class="user-info">
               <div class="user-name">{{ user.name }}</div>
               <div class="user-username">@{{ user.username }}</div>
             </div>
@@ -103,18 +87,21 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
-import { useUsersStore } from '../stores/users';
 
 const router = useRouter();
 const authStore = useAuthStore();
-const usersStore =  useUsersStore();
 const newPostContent = ref('');
 
 // Current user data
-const currentUser = ref(authStore.user);
+const currentUser = ref({
+  id: 1,
+  name: 'John Doe',
+  username: 'johndoe',
+  email: 'john@example.com'
+});
 
 // Computed property to get user initial for avatar
 const userInitial = computed(() => {
@@ -165,15 +152,29 @@ const posts = ref([
 ]);
 
 // Sample users data
-const users = ref([]);
+const users = ref([
+  {
+    id: 2,
+    name: 'Sarah Johnson',
+    username: 'sarahj'
+  },
+  {
+    id: 3,
+    name: 'Alex Chen',
+    username: 'alexc'
+  },
+  {
+    id: 4,
+    name: 'Emily Wilson',
+    username: 'emilyw'
+  },
+  {
+    id: 5,
+    name: 'Michael Brown',
+    username: 'michaelb'
+  }
+]);
 
-onMounted(async () => {
-  // Fetch users from the store
-  await usersStore.getUsers();
-  users.value = usersStore.users_list;
-  console.log(usersStore.users_list);
-  console.log(users.value);
-});
 // Format time to relative format (e.g., "5m", "2h", "1d")
 const formatTime = (timestamp) => {
   const now = new Date();
@@ -298,6 +299,10 @@ const handleLogout = () => {
   background-color: white;
 }
 
+.logo:hover {
+  cursor: pointer;
+}
+
 .logo h2 {
   font-size: 30px;
   font-weight: 600;
@@ -334,15 +339,6 @@ const handleLogout = () => {
   font-size: 14px;
   color: #666;
   margin: 0;
-}
-
-.users-list-item {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  width: 100%;
-  margin-top: 20px;
 }
 
 .navigation {
@@ -400,53 +396,6 @@ const handleLogout = () => {
   font-size: 25px;
   font-weight: 600;
   margin: 0;
-}
-
-.compose-post {
-  display: flex;
-  padding: 16px 20px;
-  border-bottom: 1px solid #eaeaea;
-}
-
-.compose-input {
-  flex: 1;
-  margin-left: 12px;
-}
-
-textarea {
-  width: 100%;
-  border: none;
-  resize: none;
-  font-size: 16px;
-  font-family: 'Inter', sans-serif;
-  margin-bottom: 12px;
-  outline: none;
-}
-
-.compose-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.btn-primary {
-  padding: 8px 20px;
-  background-color: #111;
-  color: white;
-  border: none;
-  border-radius: 24px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.btn-primary:hover {
-  background-color: #000;
-}
-
-.btn-primary:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
 }
 
 /* Posts Styles */

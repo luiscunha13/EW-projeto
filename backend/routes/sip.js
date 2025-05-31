@@ -70,14 +70,8 @@ router.post('/ingest', upload.single('sip'), async (req, res) => {
 
         console.log('SIP package successfully processed');
 
-        res.json({
-            message: 'SIP package successfully processed',
-            metadataId: metadataDoc._id,
-            files: storedFiles.map(f => ({
-                filename: f.filename,
-                fileId: f.fileId
-            })),
-            storageLocation: userStoragePath
+        res.status(201).jsonp({
+            success: true,
         });
 
     } catch (error) {
@@ -201,8 +195,8 @@ async function processAndStoreFiles(zip, manifest, storagePath, submitter) {
             const fileInfoDoc = await FileInfo.create({
                 filename: fileName,
                 file_path: fileStoragePath,
-                checksum: fileInfo.checksum.value,
-                mimeType: fileInfo.mimeType || 'application/octet-stream'
+                mimeType: fileInfo.mimeType || 'application/octet-stream',
+                size: fileInfo.size
             });
 
             results.push({
@@ -234,7 +228,7 @@ async function storeMetadata(manifest, storedFiles, submitter) {
             user: submitter,
             creationDate: new Date(manifest.created),
             lastModified: (() => {const now = new Date(); now.setHours(now.getHours() + 1); return now;})(),
-            occurrenceDate: new Date(manifest.created),
+            occurrenceDate: manifest.occurrenceDate,
             title: manifest.title,
             description: manifest.description,
             visibility: manifest.isPublic ? 'public' : 'private',
@@ -291,5 +285,185 @@ async function storeMetadata(manifest, storedFiles, submitter) {
         throw err;
     }
 }
+
+// Helper function to reconstruct SIP for a single publication
+async function reconstructSIP(metadataDoc) {
+    const zip = new JSZip();
+    
+    // Add manifest
+    const manifest = {
+        version: "1.0",
+        created: metadataDoc.creationDate.toISOString(),
+        occurenceDate: metadataDoc.occurrenceDate,
+        title: metadataDoc.title,
+        description: metadataDoc.description,
+        isPublic: metadataDoc.visibility === 'public',
+        submitter: metadataDoc.user,
+        resourceType: metadataDoc.resourceType,
+        files: []
+    };
+
+    // Add resource-specific fields to manifest
+    const resourceFields = [
+        'sport', 'activityTime', 'activityDistance',
+        'institution', 'course', 'schoolYear',
+        'familyMember', 'places',
+        'company', 'position',
+        'feeling',
+        'artist', 'genre', 'movie', 'festival'
+    ];
+    
+    resourceFields.forEach(field => {
+        if (metadataDoc[field] !== undefined) {
+            manifest[field] = metadataDoc[field];
+        }
+    });
+
+    // Create folders
+    const dataFolder = zip.folder('data');
+    const metadataFolder = zip.folder('metadata');
+
+    // Add files and their metadata
+    for (const fileId of metadataDoc.files) {
+        const fileInfo = await FileInfo.findById(fileId);
+        try {
+            // Read file data
+            const fileData = fs.readFileSync(fileInfo.file_path);
+            
+            // Calculate file hash
+            const fileHash = generateSHA256(fileData);
+            
+            // Add to zip
+            dataFolder.file(fileInfo.filename, fileData);
+            
+            // Create metadata file
+            const fileMetadata = {
+                creationDate: metadataDoc.creationDate.toISOString(),
+                submissionDate: metadataDoc.lastModified.toISOString(),
+                submitter: metadataDoc.user,
+                originalFilename: fileInfo.filename,
+                mimeType: fileInfo.mimeType,
+                size: fileInfo.size,
+            };
+            
+            const metadataContent = JSON.stringify(fileMetadata, null, 2);
+            const metadataFileName = `${fileInfo.filename}.json`;
+            metadataFolder.file(metadataFileName, metadataContent);
+            
+            // Calculate metadata hash
+            const metadataHash = generateSHA256(metadataContent);
+
+            // Add file info to manifest
+            manifest.files.push({
+                filePath: `data/${fileInfo.filename}`,
+                metadataPath: `metadata/${metadataFileName}`,
+                checksum: {
+                    algorithm: "SHA-256",
+                    value: fileHash
+                },
+                metadataChecksum: {
+                    algorithm: "SHA-256",
+                    value: metadataHash
+                },
+                size: fileInfo.size
+            });
+
+        } catch (err) {
+            console.error(`Error processing file ${fileInfo.filename}:`, err);
+            continue;
+        }
+    }
+
+    // Add manifest to zip
+    zip.file('manifesto-SIP.json', JSON.stringify(manifest, null, 2));
+    
+    // Generate the zip file
+    return zip.generateAsync({ type: 'nodebuffer' });
+}
+
+function generateSHA256(data) {
+    if (data instanceof Buffer) {
+        return crypto.createHash('sha256').update(data).digest('hex');
+    } else if (typeof data === 'string') {
+        return crypto.createHash('sha256').update(data, 'utf8').digest('hex');
+    } else if (data instanceof Uint8Array) {
+        return crypto.createHash('sha256').update(data).digest('hex');
+    } else {
+        // For Blob-like objects (which we shouldn't have in Node.js)
+        throw new Error('Unsupported data type for SHA-256 calculation');
+    }
+}
+
+// Get all visible publications as SIPs
+router.get('/publications/visible', async (req, res) => {
+    try {
+        const metadataDocs = await Metadata.find({ visibility: 'public' })
+            .sort({ creationDate: -1 });
+
+        // Create a zip containing all SIPs
+        const masterZip = new JSZip();
+        
+        for (const doc of metadataDocs) {
+            const sipBuffer = await reconstructSIP(doc);
+            masterZip.file(`sip-${doc._id}.zip`, sipBuffer);
+        }
+
+        const zipData = await masterZip.generateAsync({ type: 'nodebuffer' });
+        
+        res.status(200).send(zipData);
+
+    } catch (err) {
+        console.error('Error fetching visible publications:', err);
+        res.status(500).json({ error: 'Failed to fetch publications' });
+    }
+});
+
+// Get user's publications as SIPs
+router.get('/publications/user/:username', async (req, res) => {
+    try {
+
+        const metadataDocs = await Metadata.find({user: req.params.username, visibility: 'public'})
+            .sort({ creationDate: -1 });
+
+        // Create a zip containing all SIPs
+        const masterZip = new JSZip();
+        
+        for (const doc of metadataDocs) {
+            const sipBuffer = await reconstructSIP(doc);
+            masterZip.file(`sip-${doc._id}.zip`, sipBuffer);
+        }
+
+        const zipData = await masterZip.generateAsync({ type: 'nodebuffer' });
+        
+        res.status(200).send(zipData);
+
+    } catch (err) {
+        console.error('Error fetching user publications:', err);
+        res.status(500).json({ error: 'Failed to fetch user publications' });
+    }
+});
+
+router.get('/publications/self/:username', async (req, res) => {
+    try {
+        const metadataDocs = await Metadata.find({user: req.params.username})
+            .sort({ creationDate: -1 });
+
+        // Create a zip containing all SIPs
+        const masterZip = new JSZip();
+        
+        for (const doc of metadataDocs) {
+            const sipBuffer = await reconstructSIP(doc);
+            masterZip.file(`sip-${doc._id}.zip`, sipBuffer);
+        }
+
+        const zipData = await masterZip.generateAsync({ type: 'nodebuffer' });
+
+        res.status(200).send(zipData);
+
+    } catch (err) {
+        console.error('Error fetching user publications:', err);
+        res.status(500).json({ error: 'Failed to fetch user publications' });
+    }
+});
 
 module.exports = router;

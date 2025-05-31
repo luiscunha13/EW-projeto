@@ -3,8 +3,8 @@
     <div class="layout">
       <!-- Left Sidebar (same as Home.vue) -->
       <div class="sidebar left-sidebar">
-        <div class="logo">
-          <h2>EuBit</h2>
+        <div class="logo" @click="navigateToHome">
+            <h2>EuBit</h2>
         </div>
         <div class="user-info">
           <div class="avatar">{{ userInitial }}</div>
@@ -70,6 +70,16 @@
                 </div>
 
                 <div class="form-group">
+                  <label>Occurence Date</label>
+                  <input 
+                    type="date" 
+                    v-model="sipMetadata.occurenceDate" 
+                    class="sip-input"
+                    required
+                  />
+                </div>
+
+                <div class="form-group">
                   <label>Resource Type</label>
                   <select 
                     v-model="sipMetadata.resourceType" 
@@ -88,13 +98,6 @@
                     <option value="outro">Outro</option>
                   </select>
                 </div>
-                <div class="form-group">
-                  <label>Occurrence Date</label>
-                  <date-picker />
-                </div>
-              </div>
-              <div class="form-row">
-                
               </div>
 
               <!-- Dynamic fields based on resource type -->
@@ -254,14 +257,19 @@ import { saveAs } from 'file-saver';
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
-import DatePicker from '../components/DatePicker.vue';
+import { usePublicationsStore } from '../stores/pubs';
 
 export default {
   setup() {
     const router = useRouter();
     const authStore = useAuthStore();
     
-    const currentUser = ref(authStore.user);
+    const currentUser = ref({
+      id: 1,
+      name: 'John Doe',
+      username: 'johndoe',
+      email: 'john@example.com'
+    });
 
     const userInitial = computed(() => {
       return currentUser.value.name.charAt(0);
@@ -301,8 +309,8 @@ export default {
         isPublic: false,
         submitter: 'fausto',
         creationDate: new Date().toISOString().split('T')[0],
+        occurenceDate: '',
         resourceType: '',
-        occurenceDate: null,
       },
       fileItems: [],
       successMessage: '',
@@ -334,7 +342,7 @@ export default {
       ];
       
       fieldsToClear.forEach(field => {
-        this.$delete(this.sipMetadata, field);
+        delete this.sipMetadata[field];
       });
     },
     updateFamilyMembers() {
@@ -364,6 +372,7 @@ export default {
       }
     },
     async handleSubmit() {
+      const publicationsStore = usePublicationsStore();
       this.successMessage = '';
       this.errorMessage = '';
       this.isUploading = true;
@@ -381,6 +390,7 @@ export default {
         const manifest = {
           version: "1.0",
           created: new Date().toISOString(),
+          occurenceDate: this.sipMetadata.occurenceDate,
           title: this.sipMetadata.title,
           description: this.sipMetadata.description,
           isPublic: this.sipMetadata.isPublic,
@@ -410,8 +420,7 @@ export default {
             submitter: this.sipMetadata.submitter,
             originalFilename: file.name,
             mimeType: file.type,
-            size: file.size,
-            isPublic: this.sipMetadata.isPublic
+            size: file.size
           };
 
           const metadataContent = JSON.stringify(metadata, null, 2);
@@ -436,18 +445,21 @@ export default {
 
         zip.file('manifesto-SIP.json', JSON.stringify(manifest, null, 2));
         const zipBlob = await zip.generateAsync({ type: 'blob' });
+              
+        //saveAs(zipBlob, 'sip_inspection.zip'); Para fazer download do sip
         
         const formData = new FormData();
         formData.append('sip', zipBlob, 'submission.zip');
         const response = await axios.post('http://localhost:14000/api/ingest', formData);
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to upload SIP');
+        if (!response.data.success) {
+          throw new Error(response.error || 'Failed to upload SIP');
         }
 
-        this.successMessage = 'SIP created and uploaded successfully!';
+        this.successMessage = 'Post uploaded successfully!';
         this.resetForm();
+
+        publicationsStore.fetchVisiblePublications(); 
 
       } catch (error) {
         this.errorMessage = error.message;
@@ -467,107 +479,6 @@ export default {
         entretenimento: ['artist', 'genre', 'movie', 'festival']
       };
       return fieldsMap[resourceType] || [];
-    },
-    async downloadSip() {
-      this.successMessage = '';
-      this.errorMessage = '';
-      this.isUploading = true;
-
-      try {
-        // Validation
-        if (!this.sipMetadata.title) {
-                  throw new Error('SIP title is required');
-              }
-              if (!this.sipMetadata.resourceType) {
-                  throw new Error('Resource type is required');
-              }
-              if (this.fileItems.length === 0) {
-                  throw new Error('At least one file is required');
-              }
-              for (const fileItem of this.fileItems) {
-                  if (!fileItem.file) {
-                      throw new Error('All files must be selected');
-                  }
-              }
-
-              const zip = new JSZip();
-              const manifest = {
-                  version: "1.0",
-                  created: new Date().toISOString(),
-                  title: this.sipMetadata.title,
-                  description: this.sipMetadata.description,
-                  isPublic: this.sipMetadata.isPublic,
-                  submitter: this.sipMetadata.submitter,
-                  resourceType: this.sipMetadata.resourceType,
-                  files: []
-              };
-
-              // Add optional fields to manifest based on resource type
-              const optionalFields = this.getOptionalFieldsForResourceType(this.sipMetadata.resourceType);
-              optionalFields.forEach(field => {
-                  if (this.sipMetadata[field] !== undefined && this.sipMetadata[field] !== '') {
-                      manifest[field] = this.sipMetadata[field];
-                  }
-              });
-
-              // Create folders in ZIP
-              const dataFolder = zip.folder('data');
-              const metadataFolder = zip.folder('metadata');
-
-              // Process each file
-              for (const fileItem of this.fileItems) {
-                  const file = fileItem.file;
-                  
-                  // 1. Add file to data folder
-                  dataFolder.file(file.name, file);
-                  const fileHash = await this.calculateSHA256(file);
-
-                  // 2. Create metadata file (simpler now without resource type)
-                  const metadata = {
-                      creationDate: this.sipMetadata.creationDate,
-                      submissionDate: new Date().toISOString(),
-                      submitter: this.sipMetadata.submitter,
-                      originalFilename: file.name,
-                      mimeType: file.type,
-                      size: file.size,
-                      isPublic: this.sipMetadata.isPublic
-                  };
-
-                  const metadataContent = JSON.stringify(metadata, null, 2);
-                  const metadataFileName = `${file.name}.json`;
-                  metadataFolder.file(metadataFileName, metadataContent);
-                  const metadataHash = await this.calculateSHA256(new Blob([metadataContent]));
-
-                  // 3. Add to manifest
-                  manifest.files.push({
-                      filePath: `data/${file.name}`,
-                      metadataPath: `metadata/${metadataFileName}`,
-                      checksum: {
-                          algorithm: "SHA-256",
-                          value: fileHash
-                      },
-                      metadataChecksum: {
-                          algorithm: "SHA-256",
-                          value: metadataHash
-                      },
-                      size: file.size
-                  });
-              }
-
-              // Add manifest to ZIP
-              zip.file('manifesto-SIP.json', JSON.stringify(manifest, null, 2));
-
-              // Generate and send/download ZIP
-              const zipBlob = await zip.generateAsync({ type: 'blob' });
-              
-              saveAs(zipBlob, 'sip_inspection.zip');
-              this.successMessage = 'SIP downloaded for inspection!';
-      } catch (error) {
-        this.errorMessage = error.message;
-        console.error('Error:', error);
-      } finally {
-        this.isUploading = false;
-      }
     },
     async calculateSHA256(data) {
       const buffer = data instanceof Blob ? await data.arrayBuffer() : data;
@@ -602,7 +513,7 @@ export default {
 
 .layout {
   display: grid;
-  grid-template-columns: 1fr 2fr;
+  grid-template-columns: 1fr 3fr;
   max-width: 1400px;
   margin: 0 auto;
   min-height: 100vh;
@@ -620,6 +531,10 @@ export default {
 .left-sidebar {
   border-right: 1px solid #eaeaea;
   background-color: white;
+}
+
+.logo:hover {
+  cursor: pointer;
 }
 
 .logo h2 {
