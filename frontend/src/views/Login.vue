@@ -1,6 +1,7 @@
 <template>
   <div class="login-container">
     <div class="card">
+      <img src="@/assets/logo.png" alt="Logo" class="logo" />
       <h2>EuBit</h2>
       <form @submit.prevent="handleLogin">
         <div class="input-group">
@@ -75,6 +76,13 @@ const loginWithGoogle = () => {
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+.logo {
+  display: block;
+  margin: 0 auto 20px;
+  width: 220px;
+  height: auto;
+}
 
 .login-container {
   display: flex;
