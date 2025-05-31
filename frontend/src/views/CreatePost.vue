@@ -88,6 +88,13 @@
                     <option value="outro">Outro</option>
                   </select>
                 </div>
+                <div class="form-group">
+                  <label>Occurrence Date</label>
+                  <date-picker />
+                </div>
+              </div>
+              <div class="form-row">
+                
               </div>
 
               <!-- Dynamic fields based on resource type -->
@@ -247,18 +254,14 @@ import { saveAs } from 'file-saver';
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
+import DatePicker from '../components/DatePicker.vue';
 
 export default {
   setup() {
     const router = useRouter();
     const authStore = useAuthStore();
     
-    const currentUser = ref({
-      id: 1,
-      name: 'John Doe',
-      username: 'johndoe',
-      email: 'john@example.com'
-    });
+    const currentUser = ref(authStore.user);
 
     const userInitial = computed(() => {
       return currentUser.value.name.charAt(0);
@@ -299,6 +302,7 @@ export default {
         submitter: 'fausto',
         creationDate: new Date().toISOString().split('T')[0],
         resourceType: '',
+        occurenceDate: null,
       },
       fileItems: [],
       successMessage: '',

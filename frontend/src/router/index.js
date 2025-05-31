@@ -4,6 +4,8 @@ import LoginPage from '../views/Login.vue';
 import SignupPage from '../views/SignUp.vue';
 import UserHomePage from '../views/Home.vue';
 import CreatePost from '../views/CreatePost.vue'
+import AuthCallback from '../views/AuthCallback.vue';
+import AdminHome from '../views/AdminHome.vue';
 
 
 const router = createRouter({
@@ -25,7 +27,7 @@ const router = createRouter({
     { path: '/home', 
       name: 'userhomepage', 
       component: UserHomePage,
-      meta: { requiresAuth: true } // Rota que requer autenticação
+      //meta: { requiresAuth: true } // Rota que requer autenticação
     }, 
     {
       path: '/createpost',
@@ -35,8 +37,17 @@ const router = createRouter({
     {
       path: '/auth/callback',
       name: 'AuthCallback',
-      component: () => import('@/views/AuthCallback.vue'),
+      component: AuthCallback,
+    },
+    
+    // Exclusivo admin
+    {
+      path: '/admin',
+      name: 'admin',
+      component: AdminHome,
+      //meta: { requiresAdmin: true } // Rota que requer autenticação de admin
     }
+
     
   ]
 });
