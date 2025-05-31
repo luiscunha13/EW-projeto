@@ -91,7 +91,7 @@
             <div class="user-avatar">
               <div class="avatar small">{{ getInitial(user.name) }}</div>
             </div>
-            <div class="user-info">
+            <div class="user-info users-list-item">
               <div class="user-name">{{ user.name }}</div>
               <div class="user-username">@{{ user.username }}</div>
             </div>
@@ -103,21 +103,18 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
+import { useUsersStore } from '../stores/users';
 
 const router = useRouter();
 const authStore = useAuthStore();
+const usersStore =  useUsersStore();
 const newPostContent = ref('');
 
 // Current user data
-const currentUser = ref({
-  id: 1,
-  name: 'John Doe',
-  username: 'johndoe',
-  email: 'john@example.com'
-});
+const currentUser = ref(authStore.user);
 
 // Computed property to get user initial for avatar
 const userInitial = computed(() => {
@@ -168,29 +165,15 @@ const posts = ref([
 ]);
 
 // Sample users data
-const users = ref([
-  {
-    id: 2,
-    name: 'Sarah Johnson',
-    username: 'sarahj'
-  },
-  {
-    id: 3,
-    name: 'Alex Chen',
-    username: 'alexc'
-  },
-  {
-    id: 4,
-    name: 'Emily Wilson',
-    username: 'emilyw'
-  },
-  {
-    id: 5,
-    name: 'Michael Brown',
-    username: 'michaelb'
-  }
-]);
+const users = ref([]);
 
+onMounted(async () => {
+  // Fetch users from the store
+  await usersStore.getUsers();
+  users.value = usersStore.users_list;
+  console.log(usersStore.users_list);
+  console.log(users.value);
+});
 // Format time to relative format (e.g., "5m", "2h", "1d")
 const formatTime = (timestamp) => {
   const now = new Date();
@@ -351,6 +334,15 @@ const handleLogout = () => {
   font-size: 14px;
   color: #666;
   margin: 0;
+}
+
+.users-list-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  width: 100%;
+  margin-top: 20px;
 }
 
 .navigation {
