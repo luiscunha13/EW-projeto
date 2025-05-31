@@ -8,7 +8,7 @@ const UserSchema = new mongoose.Schema({
     google: { type: String, default: null }
   },
   role: { type: String, enum: ['admin', 'user'], default: 'user' },
-  createdAt: { type: Date, default: Date.now },
+  createdAt: { type: Date, default: (() => {const now = new Date(); now.setHours(now.getHours() + 1); return now;})()},
   lastLogin: Date
 });
 

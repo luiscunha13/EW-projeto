@@ -29,7 +29,7 @@ passport.use(new GoogleStrategy({
     
     if (user) {
       // Usuário já existe
-      user.lastLogin = new Date();
+      user.lastLogin = (() => {const now = new Date(); now.setHours(now.getHours() + 1); return now;})();
       await user.save();
       return done(null, user);
     }
@@ -40,7 +40,7 @@ passport.use(new GoogleStrategy({
     if (user) {
       // Vincular conta Google ao user existente
       user.authMethods.google = profile.id;
-      user.lastLogin = new Date();
+      user.lastLogin = (() => {const now = new Date(); now.setHours(now.getHours() + 1); return now;})()
       await user.save();
       return done(null, user);
     }
@@ -52,7 +52,7 @@ passport.use(new GoogleStrategy({
       authMethods: {
         google: profile.id
       },
-      lastLogin: new Date()
+      lastLogin: (() => {const now = new Date(); now.setHours(now.getHours() + 1); return now;})()
     });
     
     await user.save();

@@ -8,8 +8,7 @@ export const useAuthStore = defineStore('auth', {
   state: () => ({
     user_id: "",
     token: null,
-    role: "",
-    username : "",
+    user: null,
     isLoading: false,
     tokenValidated: false, // Cache da validação
     lastValidation: null,
@@ -31,8 +30,8 @@ export const useAuthStore = defineStore('auth', {
           return { success: false, error: response.data.message };
         }
         this.token = response.data.token;
-        this.verifyToken(this.token);
-        this.username = username;
+        await this.verifyToken(this.token);
+
         return { success: true };
       } catch (error) {
         return { success: false, error: 'Invalid username or password' };
@@ -47,15 +46,10 @@ export const useAuthStore = defineStore('auth', {
       
       try {
         const response = await axios.post(`${AUTH_API_URL}/register`, { username, name, password, role: 'user' });
-        console.log('Signup response:', response.data);
         if (response.data.success !== true) {
           return { success: false, error: response.data.message };
         }
 
-        this.token = response.token;
-        await this.verifyToken(response.token);
-        this.username = username;
-        this.authMethod = "local";
         return { success: true };
       } catch (error) {
         return { success: false, error: 'Error during registration' };
@@ -69,7 +63,7 @@ export const useAuthStore = defineStore('auth', {
   
         try {
 
-          const now = Date.now(); // cache de 5 minutos
+          const now = (() => {const now = new Date(); now.setHours(now.getHours() + 1); return now;})(); // cache de 5 minutos
           if (this.tokenValidated && this.lastValidation && (now - this.lastValidation < 5 * 60 * 1000)) {
             return true;
           }
@@ -77,10 +71,10 @@ export const useAuthStore = defineStore('auth', {
           const response = await axios.get(`${AUTH_API_URL}/verify`, {
             headers: { Authorization: `Bearer ${this.token}` }
           });
-          console.log('Token verification response:', response.data);
+
           if (response.data.valid) {
-            this.user_id = response.data.user.id;
-            this.role = response.data.user.role;
+            this.user_id = response.data.user._id;
+            this.user = response.data.user;
             this.tokenValidated = response.data.valid;
             this.lastValidation = now;
             return true;
@@ -97,7 +91,7 @@ export const useAuthStore = defineStore('auth', {
         if (!token) return false;
   
         try {
-          const now = Date.now(); // cache de 5 minutos
+          const now = ((() => {const now = new Date(); now.setHours(now.getHours() + 1); return now;})())(); // cache de 5 minutos
           if (this.tokenValidated && this.lastValidation && (now - this.lastValidation < 5 * 60 * 1000)) {
             return true;
           }

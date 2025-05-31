@@ -5,6 +5,7 @@ const cors = require('cors');
 var jwt = require('jsonwebtoken');
 const Auth = require('../auth/auth');
 const User = require('../models/user');
+const UserController = require('../controllers/user');
 
 router.use(cors({
   origin: 'http://localhost:5173',
@@ -15,7 +16,7 @@ router.use(cors({
 
 
 router.post('/register', (req, res, next) => {
-  const now = new Date();
+  const now = (() => {const now = new Date(); now.setHours(now.getHours() + 1); return now;})()
   User.register(new User({
     username: req.body.username,
     name: req.body.name,
@@ -60,7 +61,7 @@ router.post('/login', (req, res, next) => { passport.authenticate('local', { ses
       { expiresIn: '24h' }
     );
     
-    user.lastLogin = new Date();
+    user.lastLogin = (() => {const now = new Date(); now.setHours(now.getHours() + 1); return now;})()
     user.save();
     
     res.status(201).jsonp({
@@ -106,12 +107,14 @@ router.post('/logout', (req, res) => {
 /*Verificação de Tokens*/
 
 router.get('/verify', Auth.validateAndReturn, (req, res) => {
-  res.status(200).json({
-    valid: true,
-    user: {
-      id: req.user.id,
-      role: req.user.role
-    }
+  UserController.getUser(req.user.id).then(user => {
+    res.status(200).json({
+      valid: true,
+      user: user
+    });
+  })
+  .catch(err => {
+    res.status(500).json(err);
   });
 });
 
@@ -122,15 +125,19 @@ router.get('/verify-admin', Auth.validateAndReturn, (req, res) => {
       message: 'User sem permissão para aceder ao conteúdo'
     });
   }
-  
-  res.status(200).json({
-    valid: true,
-    isAdmin: true,
-    user: {
-      id: req.user.id,
-      role: req.user.role
-    }
+
+  UserController.getUser(req.user.id).then(user => {
+    res.status(200).json({
+      valid: true,
+      isAdmin: true,
+      user: user
+    });
+  })
+  .catch(err => {
+    res.status(500).json(err);
   });
+  
+  
 });
 
 /*PARTE DE DADOS*/

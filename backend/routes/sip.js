@@ -14,7 +14,7 @@ const storage = multer.diskStorage({
     cb(null, 'storage/temp/');
   },
   filename: (req, file, cb) => {
-    cb(null, `sip-${Date.now()}.zip`);
+    cb(null, `sip-${(() => {const now = new Date(); now.setHours(now.getHours() + 1); return now;})()}.zip`);
   }
 });
 
@@ -233,7 +233,7 @@ async function storeMetadata(manifest, storedFiles, submitter) {
         const metadataDoc = {
             user: submitter,
             creationDate: new Date(manifest.created),
-            lastModified: new Date(),
+            lastModified: (() => {const now = new Date(); now.setHours(now.getHours() + 1); return now;})(),
             occurrenceDate: new Date(manifest.created),
             title: manifest.title,
             description: manifest.description,
