@@ -6,7 +6,12 @@
         <Logs class="icon" />
         <h1>User Logs</h1>
       </div>
-      <span class="logs-count">{{ filteredLogs.length }} logs</span>
+      <div>
+        <button class="back-button" @click="goBack" style="margin-right: 16px;">
+          ← Go Back
+          </button>
+        <span class="logs-count">{{ filteredLogs.length }} logs</span>
+      </div>
     </div>
 
     <!-- Search -->
@@ -48,8 +53,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useLogsStore } from '@/stores/logs'
-
 import { Logs, SearchIcon, ArchiveIcon } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
+const router = useRouter()
 
 const logsStore = useLogsStore()
 const search = ref('')
@@ -65,8 +71,10 @@ const filteredLogs = computed(() =>
 )
 
 function formatTimestamp(timestamp) {
-  const date = new Date(timestamp)
-  return date.toLocaleString()
+  return new Date(timestamp)
+    .toISOString()
+    .replace('T', ' ')
+    .slice(0, 19)
 }
 
 onMounted(() => {
@@ -74,6 +82,11 @@ onMounted(() => {
     logs.value = logsStore.logs
   })
 })
+
+function goBack() {
+  router.push('/admin')
+}
+
 </script>
 
 <style scoped>
@@ -119,6 +132,24 @@ onMounted(() => {
 .logs-count {
   font-size: 14px;
   color: #6b7280;
+}
+
+/* Voltar */
+.back-button {
+  align-self: flex-start;
+  padding: 8px 16px;
+  background-color: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  color: #374151;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.back-button:hover {
+  background-color: #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 /* Search */

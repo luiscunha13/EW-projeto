@@ -2,7 +2,6 @@
   <div class="login-container">
     <div class="card">
       <img src="@/assets/logo.png" alt="Logo" class="logo" />
-      <h2>EuBit</h2>
       <form @submit.prevent="handleLogin">
         <div class="input-group">
           <input v-model="username" type="username" placeholder="UserName" required>
@@ -15,8 +14,6 @@
         </div>
         <button type="submit" class="btn-primary">Log In</button>
       </form>
-
-      
 
       <div class="divider">
         <span>or</span>
@@ -57,6 +54,9 @@ const handleLogin = async () => {
     if (!result.success) {
       errorMessage.value = result.error;
       console.error('Login failed:', result.error);
+    }
+    else if (authStore.user.role === 'admin') {
+      router.push('/admin');
     }
     else{
       router.push('/home');

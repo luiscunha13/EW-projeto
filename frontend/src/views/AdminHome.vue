@@ -5,17 +5,18 @@
       <div class="header-content">
         <div class="header-title">
           <Shield class="header-icon" />
-          <h1>Painel de Administração</h1>
+          <h1>Admin Panel</h1>
         </div>
+        <button class="logout-button" @click="logout">Logout</button>
       </div>
     </header>
 
     <!-- Main Content -->
     <main class="main-content">
       <div class="welcome-section">
-        <h2 class="welcome-title">Bem-vindo ao Dashboard</h2>
+        <h2 class="welcome-title">Welcome to the Dashboard</h2>
         <p class="welcome-description">
-          Gerir utilizadores e monitorizar a atividade da plataforma
+          Manage users and monitor platform activity
         </p>
       </div>
 
@@ -27,12 +28,12 @@
             <Users class="icon" />
           </div>
           <div class="card-content">
-            <h3 class="card-title">Gestão de Utilizadores</h3>
+            <h3 class="card-title">User Management</h3>
             <p class="card-description">
-              Ver, banir e gerir contas de utilizadores
+              View, ban, and manage user accounts
             </p>
             <div class="card-stats">
-              <span class="stat-badge">Administrar</span>
+              <span class="stat-badge">Manage</span>
             </div>
           </div>
           <div class="card-arrow">
@@ -46,12 +47,12 @@
             <FileText class="icon" />
           </div>
           <div class="card-content">
-            <h3 class="card-title">Logs de Atividade</h3>
+            <h3 class="card-title">Activity Logs</h3>
             <p class="card-description">
-              Monitorizar ações e eventos do sistema
+              Monitor system actions and events
             </p>
             <div class="card-stats">
-              <span class="stat-badge">Visualizar</span>
+              <span class="stat-badge">View</span>
             </div>
           </div>
           <div class="card-arrow">
@@ -63,17 +64,16 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { Shield, Users, FileText, ChevronRight } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
-export default {
-  name: 'AdminHome',
-  components: {
-    Shield,
-    Users,
-    FileText,
-    ChevronRight
-  }
+const router = useRouter()
+function logout() {
+  const authStore = useAuthStore()
+  authStore.logout()
+  router.push('/login')
 }
 </script>
 
@@ -100,6 +100,7 @@ export default {
   height: 80px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
 }
 
 .header-title {
@@ -119,6 +120,23 @@ export default {
   width: 36px;
   height: 36px;
   color: #111111;
+}
+
+.logout-button {
+  background-color: #ffffff;
+  color: black;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.logout-button:hover {
+  background-color: black;
+  color: white;
+  transition: background-color 0.2s ease;
 }
 
 /* Main Content */
@@ -268,49 +286,18 @@ export default {
   color: #666666;
 }
 
-/* Stats Section */
-.stats-section {
-  background: white;
-  border: 1px solid #e5e5e5;
-  border-radius: 16px;
-  padding: 32px;
-}
-
-.stats-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #111111;
-  margin: 0 0 24px 0;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 32px;
-}
-
-.stat-item {
-  text-align: center;
-}
-
-.stat-value {
-  font-size: 32px;
-  font-weight: 700;
-  color: #111111;
-  margin-bottom: 8px;
-}
-
-.stat-label {
-  font-size: 14px;
-  color: #666666;
-  font-weight: 500;
-}
-
 /* Responsive */
 @media (max-width: 768px) {
   .header-content {
     padding: 0 16px;
     height: 64px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .logout-button {
+    margin-top: 8px;
+    align-self: flex-end;
   }
 
   .header-title h1 {
@@ -344,15 +331,6 @@ export default {
     flex-direction: column;
     text-align: center;
     gap: 16px;
-  }
-
-  .stats-section {
-    padding: 24px;
-  }
-
-  .stats-grid {
-    grid-template-columns: 1fr;
-    gap: 24px;
   }
 }
 </style>

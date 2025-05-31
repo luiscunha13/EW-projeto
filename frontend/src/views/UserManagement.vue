@@ -8,6 +8,9 @@
           <h1>Administration</h1>
         </div>
         <div class="header-stats">
+          <button class="back-button" @click="goBack" style="margin-right: 16px;">
+            ← Go Back
+          </button>
           <Users class="stats-icon" />
           <span>{{ users.length }} users</span>
         </div>
@@ -138,6 +141,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { Shield, Users, Search, Ban, Trash2 } from 'lucide-vue-next'
 import { useUsersStore } from '../stores/users'
+import { useRouter } from 'vue-router'
+const router = useRouter()
 
 const users = ref([])
 const usersStore = useUsersStore()
@@ -198,6 +203,10 @@ onMounted(async () => {
   users.value = usersStore.users_list
 })
 
+function goBack() {
+  router.push('/admin')
+}
+
 </script>
 
 <style scoped>
@@ -256,6 +265,25 @@ onMounted(async () => {
 .stats-icon {
   width: 16px;
   height: 16px;
+}
+
+
+/* Voltar */
+.back-button {
+  align-self: flex-start;
+  padding: 8px 16px;
+  background-color: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  color: #374151;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.back-button:hover {
+  background-color: #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 /* Main Content */
