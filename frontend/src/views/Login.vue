@@ -4,7 +4,7 @@
       <h2>EuBit</h2>
       <form @submit.prevent="handleLogin">
         <div class="input-group">
-          <input v-model="email" type="email" placeholder="Email" required>
+          <input v-model="username" type="username" placeholder="UserName" required>
         </div>
         <div class="input-group">
           <input v-model="password" type="password" placeholder="Password" required>
@@ -39,7 +39,7 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 
-const email = ref('');
+const username = ref('');
 const password = ref('');
 const errorMessage = ref('');
 const router = useRouter();
@@ -49,13 +49,13 @@ authStore.initialize(router);
 
 const handleLogin = async () => {
   errorMessage.value = '';
-  if (email.value === '1@1' && password.value === '1') {
+  if (username.value === '1@1' && password.value === '1') {
     console.log('Bypassing login with test credentials');
     router.push('/home');
     return;
   }
   try {
-    const result = await authStore.login(email.value, password.value);
+    const result = await authStore.login(username.value, password.value);
 
     if (!result.success) {
       errorMessage.value = result.error;

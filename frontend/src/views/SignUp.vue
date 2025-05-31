@@ -7,7 +7,7 @@
           <input v-model="username" type="text" placeholder="Username" required>
         </div>
         <div class="input-group">
-          <input v-model="email" type="email" placeholder="Email" required>
+          <input v-model="name" type="name" placeholder="Name" required>
         </div>
         <div class="input-group">
           <input v-model="password" type="password" placeholder="Password" required>
@@ -29,7 +29,7 @@ import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 
 const username = ref('');
-const email = ref('');
+const name = ref('');
 const password = ref('');
 const errorMessage = ref('');
 const authStore = useAuthStore();
@@ -38,11 +38,11 @@ const router = useRouter();
 const handleSignup = async () => {
   errorMessage.value = '';
   try {
-    const result = await authStore.register(username.value, email.value, password.value);
+    const result = await authStore.register(username.value, name.value, password.value);
 
     if (!result.success) {
       errorMessage.value = result.error;
-      console.error('Login failed:', result.error);
+      console.error('Signup failed:', result.error);
     }
     else{
       router.push('/login');

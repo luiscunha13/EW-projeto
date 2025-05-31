@@ -4,12 +4,19 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var mongoose = require('mongoose');
+const passport = require('passport');
+const LocalStrategy = require('passport-local').Strategy;
 
 var mongoDB = 'mongodb://localhost:27017/EWprojeto';
 mongoose.connect(mongoDB)
 var connection = mongoose.connection
 connection.on('error', console.error.bind(console, 'Erro na conexão ao MongoDB'))
 connection.once('open', () => console.log('Conexão ao MongoDB realizada com sucesso'))
+
+const User = require('./models/user');
+passport.use(new LocalStrategy(User.authenticate()));
+passport.serializeUser(User.serializeUser());
+passport.deserializeUser(User.deserializeUser());
 
 var usersRouter = require('./routes/users')
 

@@ -7,7 +7,7 @@ const FacebookStrategy = require('passport-facebook').Strategy;
 const crypto = require('crypto');
 const cors = require('cors');
 var jwt = require('jsonwebtoken');
-var auth = require('../auth/auth');
+const Auth = require('../auth/auth');
 const User = require('../models/user');
 
 router.use(cors({
@@ -17,7 +17,7 @@ router.use(cors({
   credentials: true
 }));
 
-// Estratégia Local (username/password)
+/*// Estratégia Local (username/password)
 passport.use(new LocalStrategy(
   { usernameField: 'email' }, // email como username
   function(email, password, cb) {
@@ -38,7 +38,7 @@ passport.use(new LocalStrategy(
       return cb(null, user);
     });
   }
-));
+));*/
 
 // Estratégia Google
 /*
@@ -98,7 +98,7 @@ passport.use(new GoogleStrategy({
   });
 }));*/
 
-// Serialização/Desserialização do usuário
+/*// Serialização/Desserialização do usuário
 passport.serializeUser(function(user, cb) {
   process.nextTick(function() {
     cb(null, { id: user.id, username: user.username, role: user.role });
@@ -109,15 +109,52 @@ passport.deserializeUser(function(user, cb) {
   process.nextTick(function() {
     return cb(null, user);
   });
+});*/
+
+router.post('/register', (req, res, next) => {
+  const now = new Date();
+  console.log('Registo de utilizador:', req.body, 'em', now);
+  User.register(new User({
+    username: req.body.username,
+    name: req.body.name,
+    role: req.body.role || 'user',
+    lastLogin: now,
+    createdAt: now,
+    authMethods: {
+      google: null,
+      facebook: null
+    }
+  }),
+  req.body.password,
+  (err, registeredUser) => {
+    if (err) {
+      console.error('Erro ao registar user:', err);
+      return res.status(500).jsonp(err);
+    }
+
+    const token = jwt.sign(
+      { id: registeredUser._id, role: registeredUser.role },
+      'EngWeb2025',
+      { expiresIn: '24h' }
+    );
+
+    res.status(201).jsonp({
+      success: true,
+      token,
+    }); 
+  });
 });
 
-router.post('/login', (req, res, next) => {
-  passport.authenticate('local', { session: false }, (err, user, info) => {
-    if (err) return res.status(500).json({ message: 'Erro interno' });
-    if (!user) return res.status(401).json({ message: info.message });
+router.post('/login', (req, res, next) => { passport.authenticate('local', { session: false }, (err, user, info) => {
+    if (err) return res.status(500).json({ success : false, message: 'Erro interno' });
+    if (!user){
+      console.log('Erro de autenticação:', info.message);
+      console.error('Erro de autenticação:', err);
+
+      return res.status(401).json({ success: false, message: info.message })};
     
     const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
+      { id: user._id, role: user.role },
       'EngWeb2025',
       { expiresIn: '24h' }
     );
@@ -125,14 +162,9 @@ router.post('/login', (req, res, next) => {
     user.lastLogin = new Date();
     user.save();
     
-    res.json({
+    res.status(201).jsonp({
       success: true,
       token,
-      user: {
-        id: user._id,
-        email: user.email,
-        role: user.role
-      }
     });
   })(req, res, next);
 });
@@ -162,56 +194,40 @@ router.post('/logout', function(req, res, next) {
   });
 });
 
-router.post('/register', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    
-    const user = new User({ email });
-    
-    const registeredUser = await User.register(user, password);
-    
-    const token = jwt.sign(
-      { id: registeredUser._id, email: registeredUser.email, role: registeredUser.role },
-      'EngWeb2025',
-      { expiresIn: '24h' }
-    );
-    
-    res.status(201).json({
-      success: true,
-      token,
-      user: {
-        id: registeredUser._id,
-        email: registeredUser.email,
-        role: registeredUser.role
-      }
-    });
-  } catch (error) {
-    res.status(400).json({ 
-      message: error.message || 'Erro ao criar utilizador' 
-    });
-  }
+
+/*Verificação de Tokens*/
+
+router.get('/verify', Auth.validateAndReturn, (req, res) => {
+  res.status(200).json({
+    valid: true,
+    user: {
+      id: req.user.id,
+      role: req.user.role
+    }
+  });
 });
 
-// Middleware para verificar autenticação
-function isAuthenticated(req, res, next) {
-  if (req.isAuthenticated()) {
-    return next();
+router.get('/verify-admin', Auth.validateAndReturn, (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({
+      valid: false,
+      message: 'User sem permissão para aceder ao conteúdo'
+    });
   }
-  res.redirect('/login');
-}
-
-// Middleware para verificar se é admin
-function isAdmin(req, res, next) {
-  if (req.isAuthenticated() && req.user.role === 'admin') {
-    return next();
-  }
-  res.status(403).send('Access denied');
-}
-
+  
+  res.status(200).json({
+    valid: true,
+    isAdmin: true,
+    user: {
+      id: req.user.id,
+      role: req.user.role
+    }
+  });
+});
 
 /*PARTE DE DADOS*/
 // Obter lista de utilizadores
-router.get('/users', auth.validate, (req, res) => {
+router.get('/users', (req, res) => {
   UserController.list().then(users => {
     res.status(200).json(users);
   })
@@ -221,7 +237,7 @@ router.get('/users', auth.validate, (req, res) => {
 });
 
 // Obter utilizador por ID
-router.get('/users/:id', auth.validate, (req, res) => {
+router.get('/users/:id', (req, res) => {
   UserController.getUser(req.params.id).then(user => {
     res.status(200).json(user);
   })

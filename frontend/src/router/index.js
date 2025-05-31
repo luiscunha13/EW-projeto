@@ -25,30 +25,54 @@ const router = createRouter({
     { path: '/home', 
       name: 'userhomepage', 
       component: UserHomePage,
+      meta: { requiresAuth: true } // Rota que requer autenticação
     }, 
     {
       path: '/sip',
       name: 'sip',
       component: Sip,
+    },
+    {
+      path: '/exemplo-verificacao',
+      name: 'exemploAdmin',
+      meta: { requiresAuth: true, requiresAdmin: true } // Rota que requer autenticação e permissão de admin
     }
     
   ]
 });
 
-// Middleware para rotas protegidas
-router.beforeEach((to, from, next) => {
-    if (to.name === 'login' || to.name === 'signup') {
-      next()
+router.beforeEach(async (to, from, next) => {
+  const authStore = useAuthStore()
+  
+  // Se a rota não precisa de autenticação, deixa passar
+  // Se precisa de admin, verifica permissões
+  if (to.matched.some(record => record.meta.requiresAdmin)) {
+    const isAdmin = await authStore.verifyTokenAdmin(authStore.token)
+    if (!isAdmin) {
+      next('/home')
       return
     }
-    
-    const authStore = useAuthStore();
-    
-    if (to.meta.requiresAuth && !authStore.user) {
-      next('/login');
-    } else {
-      next();
-    }
-});
+  }
+  else if (!to.matched.some(record => record.meta.requiresAuth)) {
+    next()
+    return
+  }
+  
+  // Verifica se tem token
+  if (!authStore.token) {
+    next('/login')
+    return
+  }
+  
+  // Valida o token no servidor
+  const isTokenValid = await authStore.verifyToken(authStore.token)
+  if (!isTokenValid) {
+    authStore.logout()
+    next('/login')
+    return
+  }
+  console.log('Token válido, prosseguindo...')
+  next() // Permite navegação
+})
 
 export default router;

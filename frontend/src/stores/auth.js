@@ -1,89 +1,151 @@
 // src/stores/auth.js
 import { defineStore } from 'pinia';
-import { authService } from '../services/auth';
+import axios from 'axios';
+
+const AUTH_API_URL = 'http://localhost:13000';
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    user: null,
+    user_id: "",
     token: null,
-    role: null,
+    role: "",
+    username : "",
     isLoading: false,
-    error: null
+    error: null,
+    tokenValidated: false, // Cache da validação
+    lastValidation: null
   }),
   
   getters: {
-    isAuthenticated: (state) => state.user !== null,
-    currentUser: (state) => state.user,
     hasError: (state) => state.error !== null
   },
   
   actions: {
-    async login(email, password) {
+    async login(username, password) {
       this.isLoading = true;
       this.error = null;
       
       try {
-        const data = await authService.login(email, password);
-        this.token = data.token;
-        this.user = this.decodeToken(data.token);
+        const response = await axios.post(`${AUTH_API_URL}/login`, { username, password });
+        if (response.data.success !== true) {
+          return { success: false, error: response.data.message };
+        }
+        this.token = response.data.token;
+        this.verifyToken(this.token);
+        this.username = username;
         return { success: true };
       } catch (error) {
-        this.error = error.message;
-        return { success: false, error: error.message };
+        this.error = 'Invalid username or password';
+        return { success: false, error: this.error };
       } finally {
         this.isLoading = false;
       }
     },
 
-    async register(username, email, password) {
+    async register(username, name, password) {
       this.isLoading = true;
       this.error = null;
       
       try {
-        const data = await authService.register(username, email, password);
-        this.token = data.token;
-        this.user = this.decodeToken(data.token);
+        const response = await axios.post(`${AUTH_API_URL}/register`, { username, name, password, role: 'user' });
+        console.log('Signup response:', response.data);
+        if (response.data.success !== true) {
+          return { success: false, error: response.data.message };
+        }
+
+        this.token = response.token;
+        await this.verifyToken(response.token);
+        this.username = username;
         return { success: true };
       } catch (error) {
-        this.error = error.message;
-        return { success: false, error: error.message };
+        this.error = 'Error during registration';
+        return { success: false, error: this.error };
       } finally {
         this.isLoading = false;
       }
     },
 
-    decodeToken(token) {
-      try {
-        const base64Url = token.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        return JSON.parse(atob(base64));
-      } catch (e) {
-        return null;
+    async verifyToken(token) {
+        if (!token) return false;
+  
+        try {
+
+          const now = Date.now(); // cache de 5 minutos
+          if (this.tokenValidated && this.lastValidation && (now - this.lastValidation < 5 * 60 * 1000)) {
+            return true;
+          }
+
+          const response = await axios.get(`${AUTH_API_URL}/verify`, {
+            headers: { Authorization: `Bearer ${this.token}` }
+          });
+          console.log('Token verification response:', response.data);
+          if (response.data.valid) {
+            this.user_id = response.data.user.id;
+            this.role = response.data.user.role;
+            this.tokenValidated = response.data.valid;
+            this.lastValidation = now;
+            return true;
+          }
+          return false; 
+      
+      } catch (error) {
+        console.error('Token validation failed:', error);
+        return false;
       }
     },
 
-    async logout() {
-      await authService.logout();
-      this.user = null;
-      this.role = null;
+    async verifyTokenAdmin(token) {
+        if (!token) return false;
+  
+        try {
+          const now = Date.now(); // cache de 5 minutos
+          if (this.tokenValidated && this.lastValidation && (now - this.lastValidation < 5 * 60 * 1000)) {
+            return true;
+          }
+
+          const response = await axios.get(`${AUTH_API_URL}/verify`, {
+            headers: { Authorization: `Bearer ${this.token}` }
+          });
+
+          if (response.data.valid) {
+            this.user_id = response.data.user.id;
+            this.role = response.data.user.role;
+            this.tokenValidated = response.data.valid;
+            this.lastValidation = now;
+            return true;
+          }
+          return false; 
+      
+      } catch (error) {
+        console.error('Token validation failed:', error);
+        return false;
+      }
+    },
+
+    logout() {
+      this.token = null;
+      this.user_id = "";
+      this.role = "";
+      this.username = "";
+      this.tokenValidated = false;
+      this.lastValidation = null;
+      localStorage.removeItem('token');
     },
 
     initialize() {
       const token = localStorage.getItem('token');
       if (token) {
         this.token = token;
-        this.user = this.decodeToken(token);
+        this.user = this.verifyToken(token);
       }
-      authService.setupAxiosInterceptors();
+      axios.interceptors.request.use(config => {
+        const token = localStorage.getItem('token');
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+      });
     },
-
-    // Social login redirects
-    loginWithGoogle() {
-      window.location.href = authService.getGoogleLoginUrl();
-    },
-
-    loginWithFacebook() {
-      window.location.href = authService.getFacebookLoginUrl();
-    }
-  }
+  },
+  persist: true
 });
