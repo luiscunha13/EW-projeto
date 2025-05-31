@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 const passportLocalMongoose = require('passport-local-mongoose')
-const crypto = require('crypto'); 
 
 const UserSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
@@ -16,26 +15,6 @@ const UserSchema = new mongoose.Schema({
   lastLogin: Date
 });
 
-UserSchema.methods.validPassword = function(password) {
-  console.log('username: ', this.username)
-  console.log('email: ', this.email)
-  console.log('password: ', this.password)
-  console.log('salt: ', this.salt)
-  console.log('role: ', this.role)
-  if(!this.salt){
-    throw new Error('Salt not available for user');
-  }
-  
-  const hash= crypto.pbkdf2Sync(
-    password,
-    this.salt,
-    310000, 
-    32,
-    'sha256'
-  ).toString('hex');
-  
-  
-  return this.password === hash;
-};
+UserSchema.plugin(passportLocalMongoose)
 
 module.exports = mongoose.model('user', UserSchema);

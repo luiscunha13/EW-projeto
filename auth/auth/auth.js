@@ -31,7 +31,7 @@ module.exports.validateAdmin = (req, res, next) => {
                 return res.status(401).jsonp(err)
             }
             else {
-                if (payload.level == 'admin') {
+                if (payload.role == 'admin') {
                     next()
                 }
                 else {

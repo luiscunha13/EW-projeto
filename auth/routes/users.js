@@ -9,7 +9,6 @@ const cors = require('cors');
 var jwt = require('jsonwebtoken');
 var auth = require('../auth/auth');
 const User = require('../models/user');
-var UserController = require('../controllers/user'); 
 
 router.use(cors({
   origin: 'http://localhost:5173',
@@ -112,31 +111,29 @@ passport.deserializeUser(function(user, cb) {
   });
 });
 
-// Rotas de Login/Logout
-router.get('/login', function(req, res, next) {
-  res.render('login');
-});
-
-router.post('/login/local', function(req, res, next) {
-  passport.authenticate('local', (err, user, info) => {
-    if (err) return res.status(500).json({ error: err });
-    if (!user) return res.status(401).json({ error: info.message });
+router.post('/login', (req, res, next) => {
+  passport.authenticate('local', { session: false }, (err, user, info) => {
+    if (err) return res.status(500).json({ message: 'Erro interno' });
+    if (!user) return res.status(401).json({ message: info.message });
     
-    // Generate JWT token
-    jwt.sign(
-      {
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: user.role },
+      'EngWeb2025',
+      { expiresIn: '24h' }
+    );
+    
+    user.lastLogin = new Date();
+    user.save();
+    
+    res.json({
+      success: true,
+      token,
+      user: {
         id: user._id,
-        username: user.username,
         email: user.email,
         role: user.role
-      },
-      "EngWeb2025", 
-      { expiresIn: '1h' },
-      function(e, token) {
-        if (e) return res.status(500).json({ error: "Token generation error" });
-        res.json({ token });
       }
-    );
+    });
   })(req, res, next);
 });
 
@@ -165,64 +162,33 @@ router.post('/logout', function(req, res, next) {
   });
 });
 
-router.post('/register', async function(req, res) {
-  const { username, email, password } = req.body;
-  
+router.post('/register', async (req, res) => {
   try {
-    const existingUserEmail = await User.findOne({ email }).exec();
-    if (existingUserEmail) {
-      return res.status(400).json({ error: 'Já existe uma conta com este email' });
-    }
-    const existingUserUname = await User.findOne({ username }).exec();
-    if (existingUserUname) {
-      return res.status(400).json({ error: 'Username indisponível' });
-    }
-
-    const salt = crypto.randomBytes(16).toString('hex');
-    console.log('Generated salt:', salt);
-    const hashedPassword = crypto.pbkdf2Sync(
-      password,
-      salt,
-      310000,
-      32,
-      'sha256'
-    ).toString('hex');
-
-    console.log('Generated salt:', salt);
-
-    const newUser = new User({
-      username,
-      email,
-      password: hashedPassword,
-      salt,
-      role: 'user',
-      createdAt: new Date()
-    });
-
-    await newUser.save();
-
-    const token = await new Promise((resolve, reject) => {
-      jwt.sign(
-        {
-          id: newUser._id,
-          username: newUser.username,
-          email: newUser.email,
-          role: newUser.role
-        },
-        "EngWeb2025",
-        { expiresIn: '1h' },
-        (e, token) => {
-          if (e) reject(e);
-          else resolve(token);
-        }
-      );
-    });
-
-    res.status(201).json({ token });
+    const { email, password } = req.body;
     
-  } catch (err) {
-    console.error('Registration error:', err);
-    res.status(500).json({ error: 'Registration failed' });
+    const user = new User({ email });
+    
+    const registeredUser = await User.register(user, password);
+    
+    const token = jwt.sign(
+      { id: registeredUser._id, email: registeredUser.email, role: registeredUser.role },
+      'EngWeb2025',
+      { expiresIn: '24h' }
+    );
+    
+    res.status(201).json({
+      success: true,
+      token,
+      user: {
+        id: registeredUser._id,
+        email: registeredUser.email,
+        role: registeredUser.role
+      }
+    });
+  } catch (error) {
+    res.status(400).json({ 
+      message: error.message || 'Erro ao criar utilizador' 
+    });
   }
 });
 
