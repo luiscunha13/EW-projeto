@@ -20,6 +20,9 @@
           <button class="nav-item" @click="navigateToProfile">
             <span>Profile</span>
           </button>
+          <button class="nav-item" @click="navigateToCreatePost">
+            <span>Create Post</span>
+          </button>
           <button class="nav-item" @click="handleLogout">
             <span>Logout</span>
           </button>
@@ -245,6 +248,10 @@ const navigateToProfile = () => {
 // Navigate to a specific user's profile
 const navigateToUserProfile = (username) => {
   router.push(`/profile/${username}`);
+};
+
+const navigateToCreatePost = () => {
+  router.push(`/createpost`);
 };
 
 // Handle logout

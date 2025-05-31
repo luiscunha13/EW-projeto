@@ -3,7 +3,7 @@ import { useAuthStore } from '../stores/auth';
 import LoginPage from '../views/Login.vue';
 import SignupPage from '../views/SignUp.vue';
 import UserHomePage from '../views/Home.vue';
-import Sip from '../views/sip.vue'
+import CreatePost from '../views/CreatePost.vue'
 
 
 const router = createRouter({
@@ -28,9 +28,9 @@ const router = createRouter({
       meta: { requiresAuth: true } // Rota que requer autenticação
     }, 
     {
-      path: '/sip',
-      name: 'sip',
-      component: Sip,
+      path: '/createpost',
+      name: 'createpost',
+      component: CreatePost,
     },
     {
       path: '/auth/callback',

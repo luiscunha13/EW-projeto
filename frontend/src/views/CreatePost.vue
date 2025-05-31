@@ -1,0 +1,948 @@
+<template>
+  <div class="sip-container">
+    <div class="layout">
+      <!-- Left Sidebar (same as Home.vue) -->
+      <div class="sidebar left-sidebar">
+        <div class="logo">
+          <h2>EuBit</h2>
+        </div>
+        <div class="user-info">
+          <div class="avatar">{{ userInitial }}</div>
+          <div class="user-details">
+            <h3>{{ currentUser.name }}</h3>
+            <p>@{{ currentUser.username }}</p>
+          </div>
+        </div>
+        <nav class="navigation">
+          <button class="nav-item" @click="navigateToHome">
+            <span>Home</span>
+          </button>
+          <button class="nav-item" @click="navigateToProfile">
+            <span>Profile</span>
+          </button>
+          <button class="nav-item active">
+            <span>Create Post</span>
+          </button>
+          <button class="nav-item" @click="handleLogout">
+            <span>Logout</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <div class="feed-header">
+          <h2>Create Post</h2>
+        </div>
+
+        <div class="sip-form-container">
+          <div v-if="successMessage" class="alert success">{{ successMessage }}</div>
+          <div v-if="errorMessage" class="alert error">{{ errorMessage }}</div>
+
+          <div class="compose-sip">
+            <div class="sip-content">
+              <div class="form-group">
+                <input 
+                  type="text" 
+                  v-model="sipMetadata.title" 
+                  placeholder="Title" 
+                  class="sip-input"
+                  required
+                />
+              </div>
+              
+              <div class="form-group">
+                <textarea 
+                  v-model="sipMetadata.description" 
+                  placeholder="Description" 
+                  rows="3"
+                  class="sip-textarea"
+                ></textarea>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Visibility</label>
+                  <div class="checkbox-container">
+                    <input type="checkbox" id="visibility" v-model="sipMetadata.isPublic" />
+                    <label for="visibility" class="checkbox-label">Public</label>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label>Resource Type</label>
+                  <select 
+                    v-model="sipMetadata.resourceType" 
+                    @change="resetOptionalFields"
+                    class="sip-select"
+                    required
+                  >
+                    <option value="">Select type</option>
+                    <option value="desporto">Desporto</option>
+                    <option value="académico">Académico</option>
+                    <option value="familiar">Familiar</option>
+                    <option value="viagem">Viagem</option>
+                    <option value="trabalho">Trabalho</option>
+                    <option value="pessoal">Pessoal</option>
+                    <option value="entretenimento">Entretenimento</option>
+                    <option value="outro">Outro</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Dynamic fields based on resource type -->
+              <div v-if="sipMetadata.resourceType !='outro' && sipMetadata.resourceType !=''" class="optional-fields">
+                <!-- Desporto Fields -->
+                <div v-if="sipMetadata.resourceType === 'desporto'" class="resource-fields">
+                  <h4>Sport Details</h4>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <input type="text" v-model="sipMetadata.sport" placeholder="Sport" class="sip-input" />
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <input type="number" v-model="sipMetadata.activityTime" placeholder="Time (minutes)" class="sip-input" />
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <input type="number" v-model="sipMetadata.activityDistance" placeholder="Distance (km)" step="0.1" class="sip-input" />
+                    </div>
+                  </div>
+                </div>
+                <div v-if="sipMetadata.resourceType === 'académico'" class="resource-fields">
+                  <h4>Academic Details</h4>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <input type="text" v-model="sipMetadata.institution" placeholder="Institution" class="sip-input" />
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <input type="text" v-model="sipMetadata.course" placeholder="Course" class="sip-input" />
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <input type="text" v-model="sipMetadata.schoolYear" placeholder="School year" class="sip-input" />
+                    </div>
+                  </div>
+                </div>
+                <div v-if="sipMetadata.resourceType === 'familiar'" class="resource-fields">
+                  <h4>Family Details</h4>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <input type="text" v-model="sipMetadata.familyMember" placeholder="Family members (separated by ',')" class="sip-input" />
+                    </div>
+                  </div>
+                </div>
+                <div v-if="sipMetadata.resourceType === 'viagem'" class="resource-fields">
+                  <h4>Trip Details</h4>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <input type="text" v-model="sipMetadata.places" placeholder="Places (separated by ',')" class="sip-input" />
+                    </div>
+                  </div>
+                </div>
+                <div v-if="sipMetadata.resourceType === 'trabalho'" class="resource-fields">
+                  <h4>Work Details</h4>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <input type="text" v-model="sipMetadata.company" placeholder="Company" class="sip-input" />
+                    </div>
+                  </div>  
+                  <div class="form-row">
+                    <div class="form-group">
+                      <input type="text" v-model="sipMetadata.position" placeholder="Position" class="sip-input" />
+                    </div>
+                  </div>
+                </div>
+                <div v-if="sipMetadata.resourceType === 'pessoal'" class="resource-fields">
+                  <h4>Personal Details</h4>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <input type="text" v-model="sipMetadata.feeling" placeholder="Feeling" class="sip-input" />
+                    </div>
+                  </div>
+                </div>
+                <div v-if="sipMetadata.resourceType === 'entretenimento'" class="resource-fields">
+                  <h4>Event Details</h4>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <input type="text" v-model="sipMetadata.artist" placeholder="Artist" class="sip-input" />
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <input type="text" v-model="sipMetadata.genre" placeholder="Genre" class="sip-input" />
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <input type="text" v-model="sipMetadata.movie" placeholder="Movie" class="sip-input" />
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <input type="text" v-model="sipMetadata.festival" placeholder="Festival" class="sip-input" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- File uploads -->
+              <div class="file-uploads">
+                <h3>Add Resources</h3>
+                <div v-for="(fileItem, index) in fileItems" :key="index" class="file-item">
+                  <div class="file-input-container">
+                    <label :for="'file-' + index" class="file-label">
+                      <span v-if="!fileItem.file">Select File {{ index + 1 }}</span>
+                      <span v-else>{{ fileItem.file.name }}</span>
+                    </label>
+                    <input 
+                      type="file" 
+                      :id="'file-' + index" 
+                      @change="handleIndividualFileChange($event, index)" 
+                      class="file-input"
+                      required
+                    />
+                    <button 
+                      type="button" 
+                      @click="removeFileItem(index)" 
+                      class="remove-button"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+
+                <button type="button" @click="addFileItem" class="add-file-button">
+                  + Add Another File
+                </button>
+              </div>
+
+              <div class="sip-actions">
+                <button 
+                  type="button" 
+                  @click="handleSubmit" 
+                  :disabled="isUploading" 
+                  class="btn-primary"
+                >
+                  {{ isUploading ? 'Posting...' : 'Post' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+</template>
+
+<script>
+import JSZip from 'jszip'; 
+import axios from 'axios';
+import { saveAs } from 'file-saver';
+import { computed, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '../stores/auth';
+
+export default {
+  setup() {
+    const router = useRouter();
+    const authStore = useAuthStore();
+    
+    const currentUser = ref({
+      id: 1,
+      name: 'John Doe',
+      username: 'johndoe',
+      email: 'john@example.com'
+    });
+
+    const userInitial = computed(() => {
+      return currentUser.value.name.charAt(0);
+    });
+
+    const getInitial = (name) => {
+      return name.charAt(0);
+    };
+
+    const navigateToHome = () => {
+      router.push('/home');
+    };
+
+    const navigateToProfile = () => {
+      router.push(`/profile/${currentUser.value.username}`);
+    };
+
+    const handleLogout = () => {
+      authStore.logout();
+      router.push('/login');
+    };
+
+    return {
+      currentUser,
+      userInitial,
+      getInitial,
+      navigateToHome,
+      navigateToProfile,
+      handleLogout,
+    };
+  },
+  data() {
+    return {
+      sipMetadata: {
+        title: '',
+        description: '',
+        isPublic: false,
+        submitter: 'fausto',
+        creationDate: new Date().toISOString().split('T')[0],
+        resourceType: '',
+      },
+      fileItems: [],
+      successMessage: '',
+      errorMessage: '',
+      isUploading: false,
+    };
+  },
+  created() {
+    this.addFileItem();
+  },
+  methods: {
+    addFileItem() {
+      this.fileItems.push({
+        file: null,
+      });
+    },
+    removeFileItem(index) {
+      this.fileItems.splice(index, 1);
+    },
+    resetOptionalFields() {
+      const fieldsToClear = [
+        'sport', 'activityTime', 'activityDistance',
+        'institution', 'course', 'schoolYear',
+        'familyMember', 'familyMemberInput',
+        'places', 'placesInput',
+        'company', 'position',
+        'feeling',
+        'artist', 'genre', 'movie', 'festival'
+      ];
+      
+      fieldsToClear.forEach(field => {
+        this.$delete(this.sipMetadata, field);
+      });
+    },
+    updateFamilyMembers() {
+      if (this.sipMetadata.familyMemberInput) {
+        this.sipMetadata.familyMember = this.sipMetadata.familyMemberInput
+          .split(',')
+          .map(item => item.trim())
+          .filter(item => item);
+      } else {
+        this.sipMetadata.familyMember = [];
+      }
+    },
+    updatePlaces() {
+      if (this.sipMetadata.placesInput) {
+        this.sipMetadata.places = this.sipMetadata.placesInput
+          .split(',')
+          .map(item => item.trim())
+          .filter(item => item);
+      } else {
+        this.sipMetadata.places = [];
+      }
+    },
+    handleIndividualFileChange(event, index) {
+      const selectedFile = event.target.files[0];
+      if (selectedFile) {
+        this.fileItems[index].file = selectedFile;
+      }
+    },
+    async handleSubmit() {
+      this.successMessage = '';
+      this.errorMessage = '';
+      this.isUploading = true;
+
+      try {
+        if (!this.sipMetadata.title) throw new Error('SIP title is required');
+        if (!this.sipMetadata.resourceType) throw new Error('Resource type is required');
+        if (this.fileItems.length === 0) throw new Error('At least one file is required');
+        
+        for (const fileItem of this.fileItems) {
+          if (!fileItem.file) throw new Error('All files must be selected');
+        }
+
+        const zip = new JSZip();
+        const manifest = {
+          version: "1.0",
+          created: new Date().toISOString(),
+          title: this.sipMetadata.title,
+          description: this.sipMetadata.description,
+          isPublic: this.sipMetadata.isPublic,
+          submitter: this.sipMetadata.submitter,
+          resourceType: this.sipMetadata.resourceType,
+          files: []
+        };
+
+        const optionalFields = this.getOptionalFieldsForResourceType(this.sipMetadata.resourceType);
+        optionalFields.forEach(field => {
+          if (this.sipMetadata[field] !== undefined && this.sipMetadata[field] !== '') {
+            manifest[field] = this.sipMetadata[field];
+          }
+        });
+
+        const dataFolder = zip.folder('data');
+        const metadataFolder = zip.folder('metadata');
+
+        for (const fileItem of this.fileItems) {
+          const file = fileItem.file;
+          dataFolder.file(file.name, file);
+          const fileHash = await this.calculateSHA256(file);
+
+          const metadata = {
+            creationDate: this.sipMetadata.creationDate,
+            submissionDate: new Date().toISOString(),
+            submitter: this.sipMetadata.submitter,
+            originalFilename: file.name,
+            mimeType: file.type,
+            size: file.size,
+            isPublic: this.sipMetadata.isPublic
+          };
+
+          const metadataContent = JSON.stringify(metadata, null, 2);
+          const metadataFileName = `${file.name}.json`;
+          metadataFolder.file(metadataFileName, metadataContent);
+          const metadataHash = await this.calculateSHA256(new Blob([metadataContent]));
+
+          manifest.files.push({
+            filePath: `data/${file.name}`,
+            metadataPath: `metadata/${metadataFileName}`,
+            checksum: {
+              algorithm: "SHA-256",
+              value: fileHash
+            },
+            metadataChecksum: {
+              algorithm: "SHA-256",
+              value: metadataHash
+            },
+            size: file.size
+          });
+        }
+
+        zip.file('manifesto-SIP.json', JSON.stringify(manifest, null, 2));
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        
+        const formData = new FormData();
+        formData.append('sip', zipBlob, 'submission.zip');
+        const response = await axios.post('http://localhost:14000/api/ingest', formData);
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to upload SIP');
+        }
+
+        this.successMessage = 'SIP created and uploaded successfully!';
+        this.resetForm();
+
+      } catch (error) {
+        this.errorMessage = error.message;
+        console.error('Error:', error);
+      } finally {
+        this.isUploading = false;
+      }
+    },
+    getOptionalFieldsForResourceType(resourceType) {
+      const fieldsMap = {
+        desporto: ['sport', 'activityTime', 'activityDistance'],
+        académico: ['institution', 'course', 'schoolYear'],
+        familiar: ['familyMember'],
+        viagem: ['places'],
+        trabalho: ['company', 'position'],
+        pessoal: ['feeling'],
+        entretenimento: ['artist', 'genre', 'movie', 'festival']
+      };
+      return fieldsMap[resourceType] || [];
+    },
+    async downloadSip() {
+      this.successMessage = '';
+      this.errorMessage = '';
+      this.isUploading = true;
+
+      try {
+        // Validation
+        if (!this.sipMetadata.title) {
+                  throw new Error('SIP title is required');
+              }
+              if (!this.sipMetadata.resourceType) {
+                  throw new Error('Resource type is required');
+              }
+              if (this.fileItems.length === 0) {
+                  throw new Error('At least one file is required');
+              }
+              for (const fileItem of this.fileItems) {
+                  if (!fileItem.file) {
+                      throw new Error('All files must be selected');
+                  }
+              }
+
+              const zip = new JSZip();
+              const manifest = {
+                  version: "1.0",
+                  created: new Date().toISOString(),
+                  title: this.sipMetadata.title,
+                  description: this.sipMetadata.description,
+                  isPublic: this.sipMetadata.isPublic,
+                  submitter: this.sipMetadata.submitter,
+                  resourceType: this.sipMetadata.resourceType,
+                  files: []
+              };
+
+              // Add optional fields to manifest based on resource type
+              const optionalFields = this.getOptionalFieldsForResourceType(this.sipMetadata.resourceType);
+              optionalFields.forEach(field => {
+                  if (this.sipMetadata[field] !== undefined && this.sipMetadata[field] !== '') {
+                      manifest[field] = this.sipMetadata[field];
+                  }
+              });
+
+              // Create folders in ZIP
+              const dataFolder = zip.folder('data');
+              const metadataFolder = zip.folder('metadata');
+
+              // Process each file
+              for (const fileItem of this.fileItems) {
+                  const file = fileItem.file;
+                  
+                  // 1. Add file to data folder
+                  dataFolder.file(file.name, file);
+                  const fileHash = await this.calculateSHA256(file);
+
+                  // 2. Create metadata file (simpler now without resource type)
+                  const metadata = {
+                      creationDate: this.sipMetadata.creationDate,
+                      submissionDate: new Date().toISOString(),
+                      submitter: this.sipMetadata.submitter,
+                      originalFilename: file.name,
+                      mimeType: file.type,
+                      size: file.size,
+                      isPublic: this.sipMetadata.isPublic
+                  };
+
+                  const metadataContent = JSON.stringify(metadata, null, 2);
+                  const metadataFileName = `${file.name}.json`;
+                  metadataFolder.file(metadataFileName, metadataContent);
+                  const metadataHash = await this.calculateSHA256(new Blob([metadataContent]));
+
+                  // 3. Add to manifest
+                  manifest.files.push({
+                      filePath: `data/${file.name}`,
+                      metadataPath: `metadata/${metadataFileName}`,
+                      checksum: {
+                          algorithm: "SHA-256",
+                          value: fileHash
+                      },
+                      metadataChecksum: {
+                          algorithm: "SHA-256",
+                          value: metadataHash
+                      },
+                      size: file.size
+                  });
+              }
+
+              // Add manifest to ZIP
+              zip.file('manifesto-SIP.json', JSON.stringify(manifest, null, 2));
+
+              // Generate and send/download ZIP
+              const zipBlob = await zip.generateAsync({ type: 'blob' });
+              
+              saveAs(zipBlob, 'sip_inspection.zip');
+              this.successMessage = 'SIP downloaded for inspection!';
+      } catch (error) {
+        this.errorMessage = error.message;
+        console.error('Error:', error);
+      } finally {
+        this.isUploading = false;
+      }
+    },
+    async calculateSHA256(data) {
+      const buffer = data instanceof Blob ? await data.arrayBuffer() : data;
+      const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    },
+    resetForm() {
+      this.sipMetadata = {
+        title: '',
+        description: '',
+        isPublic: false,
+        submitter: 'fausto',
+        creationDate: new Date().toISOString().split('T')[0],
+        resourceType: ''
+      };
+      this.fileItems = [];
+      this.addFileItem();
+    }
+  }
+};
+</script>
+
+<style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+.sip-container {
+  min-height: 100vh;
+  background-color: #f8f8f8;
+  font-family: 'Inter', sans-serif;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  max-width: 1400px;
+  margin: 0 auto;
+  min-height: 100vh;
+}
+
+/* Sidebar styles (same as Home.vue) */
+.sidebar {
+  padding: 20px;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  overflow-y: auto;
+}
+
+.left-sidebar {
+  border-right: 1px solid #eaeaea;
+  background-color: white;
+}
+
+.logo h2 {
+  font-size: 30px;
+  font-weight: 600;
+  margin-bottom: 40px;
+  margin-left: 15px;
+  color: #111;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  transition: background-color 0.2s;
+  cursor: pointer;
+}
+
+.user-info:hover {
+  background-color: #f5f5f5;
+}
+
+.user-details {
+  margin-left: 12px;
+}
+
+.user-details h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.user-details p {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
+}
+
+.navigation {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  border-radius: 12px;
+  font-size: 20px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  background: none;
+  transition: background-color 0.2s;
+  text-align: left;
+}
+
+.nav-item:hover {
+  background-color: #f5f5f5;
+}
+
+.nav-item.active {
+  font-weight: 600;
+}
+
+/* Main content styles */
+.main-content {
+  border-left: 1px solid #eaeaea;
+  border-right: 1px solid #eaeaea;
+  background-color: white;
+  min-height: 100vh;
+}
+
+.feed-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #eaeaea;
+  position: sticky;
+  top: 0;
+  background-color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(5px);
+  z-index: 10;
+}
+
+.feed-header h2 {
+  font-size: 25px;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* SIP Form styles */
+.sip-form-container {
+  padding: 20px;
+}
+
+.compose-sip {
+  display: flex;
+  gap: 16px;
+  padding: 16px 0;
+}
+
+.sip-content {
+  flex: 1;
+}
+
+.sip-input, .sip-textarea, .sip-select {
+  width: 95%;
+  padding: 12px;
+  border: 1px solid #eaeaea;
+  border-radius: 12px;
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  margin-bottom: 12px;
+  transition: border-color 0.2s;
+}
+
+.sip-input:focus, .sip-textarea:focus, .sip-select:focus {
+  outline: none;
+  border-color: #1d9bf0;
+}
+
+.sip-textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.form-row .form-group {
+  flex: 1;
+}
+
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.checkbox-label {
+  margin-left: 10px;
+  font-weight: 500;
+}
+
+/* File upload styles */
+.file-uploads {
+  margin-top: 24px;
+  border-top: 1px solid #eaeaea;
+  padding-top: 16px;
+}
+
+.file-item {
+  margin-bottom: 12px;
+}
+
+.file-input-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.file-label {
+  flex: 1;
+  padding: 12px;
+  border: 1px dashed #ccc;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.file-label:hover {
+  background-color: #f5f5f5;
+}
+
+.file-input {
+  display: none;
+}
+
+.remove-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background-color: #f5f5f5;
+  color: #666;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.remove-button:hover {
+  background-color: #eaeaea;
+}
+
+.add-file-button {
+  width: 100%;
+  padding: 12px;
+  background-color: transparent;
+  border: 1px dashed #ccc;
+  border-radius: 12px;
+  color: #1d9bf0;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.add-file-button:hover {
+  background-color: #f5f5f5;
+}
+
+/* Button styles */
+.sip-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #eaeaea;
+}
+
+.btn-primary {
+  padding: 12px 24px;
+  background-color: #111;
+  color: white;
+  border: none;
+  border-radius: 24px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.btn-primary:hover {
+  background-color: #000;
+}
+
+.btn-primary:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  padding: 12px 24px;
+  background-color: transparent;
+  color: #111;
+  border: 1px solid #eaeaea;
+  border-radius: 24px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.btn-secondary:hover {
+  background-color: #f5f5f5;
+}
+
+.btn-secondary:disabled {
+  color: #ccc;
+  border-color: #eee;
+  cursor: not-allowed;
+}
+
+/* Alert styles */
+.alert {
+  width: 95%;
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+
+.success {
+  background-color: #e6ffe6;
+  color: #00a000;
+  border: 1px solid #00a000;
+}
+
+.error {
+  background-color: #ffe6e6;
+  color: #e0245e;
+  border: 1px solid #e0245e;
+}
+
+/* Optional fields styles */
+.optional-fields {
+  margin-top: 16px;
+  padding: 16px;
+  background-color: #f9f9f9;
+  border-radius: 12px;
+}
+
+.resource-fields h4 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  color: #555;
+}
+
+/* Avatar Styles */
+.avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: #111;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .left-sidebar {
+    display: none;
+  }
+}
+</style>
