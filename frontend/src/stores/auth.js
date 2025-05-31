@@ -11,9 +11,9 @@ export const useAuthStore = defineStore('auth', {
     role: "",
     username : "",
     isLoading: false,
-    error: null,
     tokenValidated: false, // Cache da validação
-    lastValidation: null
+    lastValidation: null,
+    authMethod: "local",
   }),
   
   getters: {
@@ -35,8 +35,7 @@ export const useAuthStore = defineStore('auth', {
         this.username = username;
         return { success: true };
       } catch (error) {
-        this.error = 'Invalid username or password';
-        return { success: false, error: this.error };
+        return { success: false, error: 'Invalid username or password' };
       } finally {
         this.isLoading = false;
       }
@@ -56,10 +55,10 @@ export const useAuthStore = defineStore('auth', {
         this.token = response.token;
         await this.verifyToken(response.token);
         this.username = username;
+        this.authMethod = "local";
         return { success: true };
       } catch (error) {
-        this.error = 'Error during registration';
-        return { success: false, error: this.error };
+        return { success: false, error: 'Error during registration' };
       } finally {
         this.isLoading = false;
       }
@@ -122,14 +121,55 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
+    loginWithGoogle() {
+      window.location.href = `${AUTH_API_URL}/google`;
+    },
+    async processGoogleAuth(token) {
+      this.isLoading = true;
+      this.error = null;
+      
+      try {
+        this.token = token;
+        
+        // Verificar e buscar dados do usuário
+        const isValid = await this.verifyToken(token);
+        if (isValid) {
+          this.authMethod = "google";
+          return { success: true };
+        } else {
+          throw new Error('Token inválido');
+        }
+      } catch (error) {
+        return { success: false, error: 'Erro ao processar autenticação Google' };
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
     logout() {
-      this.token = null;
-      this.user_id = "";
-      this.role = "";
-      this.username = "";
-      this.tokenValidated = false;
-      this.lastValidation = null;
-      localStorage.removeItem('token');
+      // Guardar o token antes de limpar
+      const currentToken = this.token;
+  
+      // Fazer logout no servidor primeiro
+      axios.post(`${AUTH_API_URL}/logout`, {
+        headers: { Authorization: `Bearer ${currentToken}` }
+      })
+      .then(() => {
+        console.log('Logout no servidor realizado');
+      })
+      .catch(error => {
+        console.error('Logout failed:', error);
+      })
+      .finally(() => {
+        // Limpar dados locais independentemente do resultado
+        this.token = null;
+        this.user_id = "";
+        this.role = "";
+        this.username = "";
+        this.tokenValidated = false;
+        this.lastValidation = null;
+        localStorage.removeItem('token');
+      });
     },
 
     initialize() {

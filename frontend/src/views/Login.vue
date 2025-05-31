@@ -71,12 +71,10 @@ const handleLogin = async () => {
 };
 
 const loginWithGoogle = () => {
-  authStore.getGoogleLoginUrl();
+  authStore.loginWithGoogle();
 };
 
-const loginWithFacebook = () => {
-  authStore.getFacebookLoginUrl();
-};
+
 </script>
 
 <style scoped>

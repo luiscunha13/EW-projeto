@@ -12,7 +12,6 @@
     "@tailwindcss/vite": "^4.1.7",
     "axios": "^1.9.0",
     "file-saver": "^2.0.5",
-    "jsonwebtoken": "^9.0.2",
     "jszip": "^3.10.1",
     "pinia": "^3.0.2",
     "pinia-plugin-persistedstate": "^4.3.0",

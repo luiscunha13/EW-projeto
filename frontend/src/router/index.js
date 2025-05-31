@@ -33,9 +33,9 @@ const router = createRouter({
       component: Sip,
     },
     {
-      path: '/exemplo-verificacao',
-      name: 'exemploAdmin',
-      meta: { requiresAuth: true, requiresAdmin: true } // Rota que requer autenticação e permissão de admin
+      path: '/auth/callback',
+      name: 'AuthCallback',
+      component: () => import('@/views/AuthCallback.vue'),
     }
     
   ]
