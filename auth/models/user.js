@@ -9,7 +9,8 @@ const UserSchema = new mongoose.Schema({
   },
   role: { type: String, enum: ['admin', 'user'], default: 'user' },
   createdAt: { type: Date, default: (() => {const now = new Date(); now.setHours(now.getHours() + 1); return now;})()},
-  lastLogin: Date
+  lastLogin: Date,
+  feedBanned: { type: Boolean, default: false },
 });
 
 UserSchema.plugin(passportLocalMongoose)

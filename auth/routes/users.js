@@ -161,4 +161,36 @@ router.get('/users/:id', (req, res) => {
   });
 });
 
+router.put('/users/:id', Auth.validateAndReturn, (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({
+      message: 'User sem permissão para atualizar utilizadores'
+    });
+  }
+
+  const updateData = req.body;
+
+  UserController.updateUser(req.params.id, updateData).then(() => {
+    res.status(200).json({ message: 'Utilizador atualizado com sucesso' });
+  })
+  .catch(err => {
+    res.status(500).json(err);
+  });
+});
+
+router.delete('/users/:id', Auth.validateAndReturn, (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({
+      message: 'User sem permissão para eliminar utilizadores'
+    });
+  }
+
+  UserController.deleteUser(req.params.id).then(() => {
+    res.status(200).json({ message: 'Utilizador eliminado com sucesso' });
+  })
+  .catch(err => {
+    res.status(500).json(err);
+  });
+});
+
 module.exports = router;

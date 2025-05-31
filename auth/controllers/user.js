@@ -2,7 +2,7 @@ const User = require('../models/user');
 
 // Devolve a lista de Users
 module.exports.list = () => {
-    return User.find()
+    return User.find({ role: { $ne: 'admin' } })
         .sort('name')
         .then(resposta => resposta)
         .catch(erro => erro);

@@ -6,6 +6,8 @@ import UserHomePage from '../views/Home.vue';
 import CreatePost from '../views/CreatePost.vue'
 import AuthCallback from '../views/AuthCallback.vue';
 import AdminHome from '../views/AdminHome.vue';
+import UserManagement from '../views/UserManagement.vue';
+import Logs from '../views/Logs.vue';
 
 
 const router = createRouter({
@@ -45,6 +47,18 @@ const router = createRouter({
       path: '/admin',
       name: 'admin',
       component: AdminHome,
+      //meta: { requiresAdmin: true } // Rota que requer autenticação de admin
+    },
+    {
+      path: '/admin/usermanagement',
+      name: 'usermanagement',
+      component: UserManagement,
+      //meta: { requiresAdmin: true } // Rota que requer autenticação de admin
+    },
+    {
+      path: '/admin/logs',
+      name: 'logs',
+      component: Logs,
       //meta: { requiresAdmin: true } // Rota que requer autenticação de admin
     }
 
