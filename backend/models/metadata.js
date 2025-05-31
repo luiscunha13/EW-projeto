@@ -1,19 +1,25 @@
 const mongoose = require('mongoose');
 
+const CommentSchema = new mongoose.Schema({
+  username: { type: String, required: true },
+  comment: { type: String, required: true }
+}, { _id: false });
+
 const MetadataSchema = new mongoose.Schema({
-  _id: {type: String, required: true},
   user: {type: String, required: true},
   creationDate: Date,
   lastModified: Date,
+  occurrenceDate: Date,
   title: {type: String, required: true},
+  description: {type: String, required: false},
   visibility : {
     type: String,
     required: true,
     enum: ['public', 'private'],
     default: 'private'
   },
-  description: String,
-  occurrenceDate: Date,
+  comments:[CommentSchema],
+  files: [String],
   resourceType: { 
     type: String,
     required: true,

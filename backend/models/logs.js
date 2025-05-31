@@ -6,4 +6,4 @@ const LogSchema = new mongoose.Schema({
     action: { type: String, required: true },
 })
 
-module.exports = mongoose.model('logs', LogSchema);
+module.exports = mongoose.model('log', LogSchema);

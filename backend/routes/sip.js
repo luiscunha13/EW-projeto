@@ -7,10 +7,20 @@ const cors = require('cors');
 const path = require('path');
 const crypto = require('crypto');
 const Metadata = require('../models/metadata');
+const FileInfo = require('../models/fileInfo');
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'storage/temp/');
+  },
+  filename: (req, file, cb) => {
+    cb(null, `sip-${Date.now()}.zip`);
+  }
+});
 
 const upload = multer({ storage });
 
-router.use(cors()); 
+router.use(cors());
 
 router.post('/ingest', upload.single('sip'), async (req, res) => {
     let tempFilePath = req.file?.path;
@@ -20,6 +30,7 @@ router.post('/ingest', upload.single('sip'), async (req, res) => {
             console.log('No file uploaded')
             return res.status(400).json({ error: 'No SIP package uploaded' });
         }
+
         const zipData = fs.readFileSync(tempFilePath);
         const zip = await JSZip.loadAsync(zipData);
         const zipFiles = Object.keys(zip.files);
@@ -32,12 +43,14 @@ router.post('/ingest', upload.single('sip'), async (req, res) => {
         const manifestContent = await zip.file('manifesto-SIP.json').async('string');
         const manifest = JSON.parse(manifestContent);
 
-        // Get the submitter from the manifest
         const submitter = manifest.submitter;
         if (!submitter) {
             console.log('Submitter information missing in manifest')
             return res.status(400).json({ error: 'Submitter information missing in manifest' });
         }
+
+        const userStoragePath = path.join(__dirname, '..', 'storage', submitter);
+        fs.mkdirSync(userStoragePath, { recursive: true });
 
         const verificationResults = await verifyFiles(zip, manifest, zipFiles);
         
@@ -48,23 +61,23 @@ router.post('/ingest', upload.single('sip'), async (req, res) => {
                 details: verificationResults.errors
             });
         }
-        
 
-        // Create user-specific storage directory using the submitter from manifest
-        const userStoragePath = path.join(__dirname, '..', 'storage', submitter);
-        const extractPath = path.join(userStoragePath, Date.now().toString());
+        const storedFiles = await processAndStoreFiles(zip, manifest, userStoragePath, submitter);
         
-        await processAndStoreFiles(zip, manifest, extractPath, submitter);
-        //await storeMetadata(zip, manifest, extractPath, submitter);
+        const metadataDoc = await storeMetadata(manifest, storedFiles, submitter);
 
         fs.unlinkSync(tempFilePath);
 
-        console.log('SIP package successfully processed and stored');
+        console.log('SIP package successfully processed');
 
         res.json({
             message: 'SIP package successfully processed',
-            receivedFiles: verificationResults.valid,
-            storageLocation: extractPath
+            metadataId: metadataDoc._id,
+            files: storedFiles.map(f => ({
+                filename: f.filename,
+                fileId: f.fileId
+            })),
+            storageLocation: userStoragePath
         });
 
     } catch (error) {
@@ -72,7 +85,6 @@ router.post('/ingest', upload.single('sip'), async (req, res) => {
             fs.unlinkSync(tempFilePath);
         }
         console.error('Error processing SIP:', error);
-        // Ensure we return JSON for API errors
         res.status(500).json({ 
             error: 'Internal server error',
             details: error.message 
@@ -84,7 +96,6 @@ function calculateSHA256(buffer) {
     return crypto.createHash('sha256').update(buffer).digest('hex');
 }
 
-// Helper functions
 async function verifyFiles(zip, manifest, zipFiles) {
     const results = { valid: [], errors: [] };
     
@@ -92,10 +103,9 @@ async function verifyFiles(zip, manifest, zipFiles) {
         try {
             console.log(`Verifying file: ${fileInfo.filePath}`);
             
-            // File existence check - be more flexible with path matching
+            // File existence check
             let fileEntry = zip.file(fileInfo.filePath);
             if (!fileEntry) {
-                // Try without data/ prefix
                 const fileName = fileInfo.filePath.replace(/^data\//, '');
                 fileEntry = zip.file(`data/${fileName}`) || zip.file(fileName);
             }
@@ -110,13 +120,10 @@ async function verifyFiles(zip, manifest, zipFiles) {
                 continue;
             }
 
-            // Checksum verification - use consistent method
-            const fileData = await fileEntry.async('nodebuffer'); // Use nodebuffer for consistency
+            // Checksum verification
+            const fileData = await fileEntry.async('nodebuffer');
             const calculatedHash = calculateSHA256(fileData);
             
-            console.log(`Expected hash: ${fileInfo.checksum.value}`);
-            console.log(`Calculated hash: ${calculatedHash}`);
-
             if (calculatedHash !== fileInfo.checksum.value) {
                 console.log(`Checksum mismatch for ${fileInfo.filePath}`);
                 results.errors.push({
@@ -131,7 +138,6 @@ async function verifyFiles(zip, manifest, zipFiles) {
             if (fileInfo.metadataPath) {
                 let metadataEntry = zip.file(fileInfo.metadataPath);
                 if (!metadataEntry) {
-                    // Try without metadata/ prefix
                     const metadataFileName = fileInfo.metadataPath.replace(/^metadata\//, '');
                     metadataEntry = zip.file(`metadata/${metadataFileName}`) || zip.file(metadataFileName);
                 }
@@ -148,9 +154,6 @@ async function verifyFiles(zip, manifest, zipFiles) {
 
                 const metadataData = await metadataEntry.async('nodebuffer');
                 const metadataHash = calculateSHA256(metadataData);
-                
-                console.log(`Expected metadata hash: ${fileInfo.metadataChecksum?.value}`);
-                console.log(`Calculated metadata hash: ${metadataHash}`);
                 
                 if (fileInfo.metadataChecksum && metadataHash !== fileInfo.metadataChecksum.value) {
                     console.log(`Metadata checksum mismatch for ${fileInfo.filePath}`);
@@ -182,52 +185,110 @@ async function verifyFiles(zip, manifest, zipFiles) {
     return results;
 }
 
-async function processAndStoreFiles(zip, manifest, extractPath, username) {
-    fs.mkdirSync(extractPath, { recursive: true });
-
-    // Create standard directory structure
-    const dataPath = path.join(extractPath, 'data');
-    const metadataPath = path.join(extractPath, 'metadata');
-    fs.mkdirSync(dataPath, { recursive: true });
-    fs.mkdirSync(metadataPath, { recursive: true });
-
+async function processAndStoreFiles(zip, manifest, storagePath, submitter) {
+    const results = [];
+    
     for (const fileInfo of manifest.files) {
-        const fileEntry = zip.file(fileInfo.filePath);
-        const fileData = await fileEntry.async('nodebuffer');
-        const outputPath = path.join(dataPath, path.basename(fileInfo.filePath));
-        fs.writeFileSync(outputPath, fileData);
+        try {
+            // Store the main file
+            const fileEntry = zip.file(fileInfo.filePath);
+            const fileData = await fileEntry.async('nodebuffer');
+            const fileName = path.basename(fileInfo.filePath);
+            const fileStoragePath = path.join(storagePath, fileName);
+            fs.writeFileSync(fileStoragePath, fileData);
 
-        if (fileInfo.metadataPath) {
-            const metadataEntry = zip.file(fileInfo.metadataPath);
-            const metadataData = await metadataEntry.async('nodebuffer');
-            const metadataOutputPath = path.join(metadataPath, path.basename(fileInfo.metadataPath));
-            fs.writeFileSync(metadataOutputPath, metadataData);
-        }
-    }
-}
-
-async function storeMetadata(zip, manifest, extractPath, username) {
-    for (const fileInfo of manifest.files) {
-        if (fileInfo.metadataPath) {
-            const metadataEntry = zip.file(fileInfo.metadataPath);
-            const metadata = JSON.parse(await metadataEntry.async('string'));
-            const filePath = path.join('data', path.basename(fileInfo.filePath));
-
-            const metadataDoc = new Metadata({
-                creationDate: new Date(metadata.creationDate),
-                submissionDate: new Date(metadata.submissionDate || Date.now()),
-                producer: metadata.producer,
-                submitter: metadata.submitter,
-                title: metadata.title,
-                resourceType: metadata.resourceType,
-                originalFilename: path.basename(fileInfo.filePath),
-                mimeType: metadata.mimeType || 'application/octet-stream',
-                storageLocation: path.join(extractPath, filePath),
-                userDirectory: path.join('users', username) 
+            // Store file info in MongoDB
+            const fileInfoDoc = await FileInfo.create({
+                filename: fileName,
+                file_path: fileStoragePath,
+                checksum: fileInfo.checksum.value,
+                mimeType: fileInfo.mimeType || 'application/octet-stream'
             });
 
-            await metadataDoc.save();
+            results.push({
+                filename: fileName,
+                filePath: fileStoragePath,
+                fileId: fileInfoDoc._id
+            });
+        } catch (err) {
+            console.error(`Error storing file ${fileInfo.filePath}:`, err);
+            results.push({
+                originalPath: fileInfo.filePath,
+                error: err.message
+            });
         }
+    }
+    
+    return results;
+}
+
+async function storeMetadata(manifest, storedFiles, submitter) {
+    try {
+        // Extract all file IDs from stored files
+        const fileIds = storedFiles
+            .filter(f => !f.error)
+            .map(f => f.fileId);
+
+        // Base metadata document
+        const metadataDoc = {
+            user: submitter,
+            creationDate: new Date(manifest.created),
+            lastModified: new Date(),
+            occurrenceDate: new Date(manifest.created),
+            title: manifest.title,
+            description: manifest.description,
+            visibility: manifest.isPublic ? 'public' : 'private',
+            files: fileIds,
+            resourceType: manifest.resourceType,
+            comments: [] 
+        };
+
+        // Add resource-specific fields based on the resourceType
+        switch (manifest.resourceType) {
+            case 'desporto':
+                if (manifest.sport) metadataDoc.sport = manifest.sport;
+                if (manifest.activityTime) metadataDoc.activityTime = manifest.activityTime;
+                if (manifest.activityDistance) metadataDoc.activityDistance = manifest.activityDistance;
+                break;
+                
+            case 'académico':
+                if (manifest.institution) metadataDoc.institution = manifest.institution;
+                if (manifest.course) metadataDoc.course = manifest.course;
+                if (manifest.schoolYear) metadataDoc.schoolYear = manifest.schoolYear;
+                break;
+                
+            case 'familiar':
+                metadataDoc.familyMember = manifest.familyMember || [];
+                break;
+                
+            case 'viagem':
+                metadataDoc.places = manifest.places || [];
+                break;
+                
+            case 'trabalho':
+                if (manifest.company) metadataDoc.company = manifest.company;
+                if (manifest.position) metadataDoc.position = manifest.position;
+                break;
+                
+            case 'pessoal':
+                if (manifest.feeling) metadataDoc.feeling = manifest.feeling;
+                break;
+                
+            case 'entretenimento':
+                if (manifest.artist) metadataDoc.artist = manifest.artist;
+                if (manifest.genre) metadataDoc.genre = manifest.genre;
+                if (manifest.movie) metadataDoc.movie = manifest.movie;
+                if (manifest.festival) metadataDoc.festival = manifest.festival;
+                break;
+                
+        }
+
+        const savedMetadata = await Metadata.create(metadataDoc);
+        return savedMetadata;
+
+    } catch (err) {
+        console.error('Error storing metadata:', err);
+        throw err;
     }
 }
 
