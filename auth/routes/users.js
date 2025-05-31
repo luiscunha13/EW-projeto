@@ -24,7 +24,6 @@ router.post('/register', (req, res, next) => {
     createdAt: now,
     authMethods: {
       google: null,
-      facebook: null
     }
   }),
   req.body.password,

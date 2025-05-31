@@ -25,10 +25,6 @@
         <svg-icon type="google" /> Continue with Google
       </button>
 
-      <button @click="loginWithFacebook" class="btn-social facebook">
-        <svg-icon type="facebook" /> Continue with Facebook
-      </button>
-
       <p class="text-center">Don't have an account? <router-link to="/signup" class="link">Sign up</router-link></p>
     </div>
   </div>
@@ -186,10 +182,6 @@ input:focus {
 
 .btn-social.google {
   color: #db4437;
-}
-
-.btn-social.facebook {
-  color: #1877f2;
 }
 
 .divider {
