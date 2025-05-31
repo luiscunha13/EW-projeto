@@ -43,6 +43,7 @@ router.post('/register', (req, res, next) => {
     res.status(201).jsonp({
       success: true,
       token,
+      createdAt: registeredUser.createdAt,
     }); 
   });
 });

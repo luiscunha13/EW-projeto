@@ -54,13 +54,6 @@ import { Logs, SearchIcon, ArchiveIcon } from 'lucide-vue-next'
 const logsStore = useLogsStore()
 const search = ref('')
 const logs = ref([])
-logs.value = [
-  { id: 1, user: 'user1', action: 'login', timestamp: '2023-10-01T12:00:00Z' },
-  { id: 2, user: 'user2', action: 'logout', timestamp: '2023-10-01T12:05:00Z' },
-  { id: 3, user: 'user1', action: 'update profile', timestamp: '2023-10-01T12:10:00Z' },
-  { id: 4, user: 'user3', action: 'delete account', timestamp: '2023-10-01T12:15:00Z' },
-  { id: 5, user: 'user2', action: 'login', timestamp: '2023-10-01T12:20:00Z' }
-]
 
 const filteredLogs = computed(() =>
   logs.value.filter(
@@ -77,8 +70,8 @@ function formatTimestamp(timestamp) {
 }
 
 onMounted(() => {
-  logsStore.getLogs().then(fetchedLogs => {
-    logs.value = fetchedLogs
+  logsStore.getLogs().then(() => {
+    logs.value = logsStore.logs
   })
 })
 </script>

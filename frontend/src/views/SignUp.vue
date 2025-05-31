@@ -1,7 +1,7 @@
 <template>
   <div class="signup-container">
     <div class="card">
-      <h2>EuBit</h2>
+      <img src="@/assets/logo.png" alt="Logo" class="logo" />
       <form @submit.prevent="handleSignup">
         <div class="input-group">
           <input v-model="username" type="text" placeholder="Username" required>
@@ -42,7 +42,7 @@ const handleSignup = async () => {
 
     if (!result.success) {
       errorMessage.value = result.error;
-      console.error('Signup failed:', result.error);
+      console.error('Signup failed:', result.err);
     }
     else{
       router.push('/login');
@@ -56,6 +56,13 @@ const handleSignup = async () => {
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+.logo {
+  display: block;
+  margin: 0 auto 20px;
+  width: 220px;
+  height: auto;
+}
 
 .signup-container {
   display: flex;

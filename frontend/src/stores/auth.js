@@ -1,6 +1,7 @@
 // src/stores/auth.js
 import { defineStore } from 'pinia';
 import axios from 'axios';
+import { useLogsStore } from './logs';
 
 const AUTH_API_URL = 'http://localhost:13000';
 
@@ -31,6 +32,13 @@ export const useAuthStore = defineStore('auth', {
         }
         this.token = response.data.token;
         await this.verifyToken(this.token);
+        
+        const logsStore = useLogsStore();
+        logsStore.addLog({
+          user: this.user.username,
+          action: 'Login',
+          timestamp: this.user.lastLogin,
+        });
 
         return { success: true };
       } catch (error) {
@@ -50,9 +58,16 @@ export const useAuthStore = defineStore('auth', {
           return { success: false, error: response.data.message };
         }
 
+        const logsStore = useLogsStore();
+        logsStore.addLog({
+          user: username,
+          action: 'Registration',
+          timestamp: response.data.createdAt,
+        });
+
         return { success: true };
       } catch (error) {
-        return { success: false, error: 'Error during registration' };
+        return { success: false, error: 'Error during registration', err: error };
       } finally {
         this.isLoading = false;
       }

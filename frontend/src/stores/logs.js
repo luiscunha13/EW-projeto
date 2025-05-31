@@ -13,7 +13,12 @@ export const useLogsStore = defineStore('logs', {
     actions: {
         async getLogs() {
             try {
-                const response = await axios.get(`${API_URL}/logs`);
+                const authStore = useAuthStore();
+                const response = await axios.get(`${API_URL}/logs`, {
+                    headers: {
+                        Authorization: `Bearer ${authStore.token}`,
+                    },
+                });
                 console.log('Users fetched successfully:', response.data);
                 this.logs = response.data;
             } catch (error) {
@@ -21,39 +26,13 @@ export const useLogsStore = defineStore('logs', {
             }
         },
 
-        async deleteUser(userId) {
-            const authStore = useAuthStore();
+        async addLog(log) {;
             try {
-                const response = await axios.delete(`${API_URL}/users/${userId}`, {
-                    headers: {
-                        Authorization: `Bearer ${authStore.token}`,
-                    },
-                });
-                console.log('User deleted successfully:', response.data);
-                this.users_list = this.users_list.filter(user => user._id !== userId);
+                const response = await axios.post(`${API_URL}/logs`, { body: log });
+                console.log('Log added successfully:', response.data);
                 return true
             } catch (error) {
-                console.error('Error deleting user:', error);
-                return false;
-            }
-        },
-
-        async updateUser(userId, userData) {
-            const authStore = useAuthStore();
-            try {
-                const response = await axios.put(`${API_URL}/users/${userId}`, userData, {
-                    headers: {
-                        Authorization: `Bearer ${authStore.token}`,
-                    },
-                });
-                console.log('User updated successfully:', response.data);
-                const index = this.users_list.findIndex(user => user._id === userId);
-                if (index !== -1) {
-                    this.users_list[index] = response.data;
-                }
-                return true;
-            } catch (error) {
-                console.error('Error updating user:', error);
+                console.error('Error adding log:', error);
                 return false;
             }
         },

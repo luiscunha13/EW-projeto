@@ -2,6 +2,15 @@ const express = require('express');
 const router = express.Router();
 const Logs = require('../controllers/logs');
 const axios = require('axios');
+const cors = require('cors');
+
+router.use(cors({
+  origin: 'http://localhost:5173',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+
 
 // Auxiliar para verificar o token JWT, pois nem todos tem acesso aos logs
 const verifyToken = async (req, res, next) => {
@@ -10,7 +19,12 @@ const verifyToken = async (req, res, next) => {
         return res.status(401).jsonp({ error: 'No token provided' });
     }
     try {
-        const response = await axios.get('http://localhost:13000/verify-admin', { token });
+        const response = await axios.get('http://localhost:13000/verify-admin',  {
+            headers: {
+                Authorization: token,
+            },
+        });
+        
         if (response.data && response.data.valid && response.data.isAdmin) {
             next();
         } else {
@@ -33,9 +47,9 @@ router.get('/', verifyToken, (req, res) => {
     });
 });
 
-router.get('/:user_id', (req, res) => {
-    const userId = req.params.user_id;
-    Logs.getLogsByUser(userId)
+router.get('/:username', (req, res) => {
+    const username = req.params.username;
+    Logs.getLogsByUser(username)
     .then(logs => {
         res.status(200).jsonp(logs);
     })
@@ -46,7 +60,8 @@ router.get('/:user_id', (req, res) => {
 });
 
 router.post('/', (req, res) => {
-    const log = req.body;
+    const log = {user: req.body.body.user, timestamp: req.body.body.timestamp, action: req.body.body.action};
+    console.log('Received log:', log);
     if (!log.user || !log.timestamp || !log.action) {
         return res.status(400).jsonp({ error: 'Missing required fields' });
     }
