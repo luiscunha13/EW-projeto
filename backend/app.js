@@ -13,6 +13,7 @@ db.once('open', () => console.log('Conexão ao MongoDB realizada com sucesso.'))
 
 var metadataRouter = require('./routes/metadata');
 var sipRouter = require('./routes/sip');
+const logsRouter = require('./routes/logs');
 
 
 var app = express();
@@ -29,6 +30,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/metadata', metadataRouter);
 app.use('/api', sipRouter);
+app.use('/logs', logsRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
