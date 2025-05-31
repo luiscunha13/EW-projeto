@@ -24,7 +24,7 @@ passport.use(new GoogleStrategy({
   callbackURL: "/auth/google/callback"
 }, async (accessToken, refreshToken, profile, done) => {
   try {
-    // Verificar se usuário já existe pelo Google ID
+    // Verificar se user já existe pelo Google ID
     let user = await User.findOne({ 'authMethods.google': profile.id });
     
     if (user) {
@@ -34,18 +34,18 @@ passport.use(new GoogleStrategy({
       return done(null, user);
     }
     
-    // Verificar se existe usuário com mesmo email
+    // Verificar se existe user com mesmo email
     user = await User.findOne({ username: profile.emails[0].value });
     
     if (user) {
-      // Vincular conta Google ao usuário existente
+      // Vincular conta Google ao user existente
       user.authMethods.google = profile.id;
       user.lastLogin = new Date();
       await user.save();
       return done(null, user);
     }
     
-    // Criar novo usuário
+    // Criar novo user
     user = new User({
       username: profile.emails[0].value,
       name: profile.displayName,
