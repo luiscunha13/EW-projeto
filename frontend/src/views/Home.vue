@@ -4,7 +4,7 @@
       <!-- Left Sidebar -->
       <div class="sidebar left-sidebar">
         <div class="logo">
-          <h2>EuBit</h2>
+          <img src="@/assets/logo.png" alt="Logo" class="logo" />
         </div>
         <div class="user-info">
           <div class="avatar">{{ userInitial }}</div>
@@ -299,16 +299,11 @@ const handleLogout = () => {
   background-color: white;
 }
 
-.logo:hover {
-  cursor: pointer;
-}
-
-.logo h2 {
-  font-size: 30px;
-  font-weight: 600;
-  margin-bottom: 40px;
-  margin-left: 15px;
-  color: #111;
+.logo {
+  display: block;
+  margin: 0 auto 20px;
+  width: 200px;
+  height: auto;
 }
 
 .user-info {
