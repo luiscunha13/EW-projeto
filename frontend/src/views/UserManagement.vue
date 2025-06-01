@@ -8,6 +8,9 @@
           <h1>Administration</h1>
         </div>
         <div class="header-stats">
+          <button class="back-button" @click="goHome" style="margin-right: 16px;">
+            Home
+          </button>
           <button class="back-button" @click="goBack" style="margin-right: 16px;">
             ← Go Back
           </button>
@@ -53,7 +56,7 @@
               <div class="user-info">
                 <div class="user-header">
                   <h3 class="user-name">{{ user.name }}</h3>
-                  <span :class="['status-badge', user.status === true ? 'status-banned': 'status-active']">
+                  <span :class="['status-badge', user.feedBanned === true ? 'status-banned': 'status-active']">
                     {{ user.feedBanned === true ? 'Banned' : 'Active' }}
                   </span>
                 </div>
@@ -186,7 +189,7 @@ const confirmAction = async () => {
   else if (actionType.value === 'ban') {
     const userIndex = users.value.findIndex(u => u._id === selectedUser.value._id)
     if (userIndex !== -1) {
-      const result = await usersStore.updateUser(selectedUser.value._id, {feedBanned: !users.value[userIndex].feedBanned, ...users.value[userIndex]})
+      const result = await usersStore.updateUser(selectedUser.value._id, { ...users.value[userIndex], feedBanned: !users.value[userIndex].feedBanned })
       if (result) {
         users.value[userIndex].feedBanned = !users.value[userIndex].feedBanned
       }
@@ -204,7 +207,6 @@ const cancelAction = () => {
 onMounted(async () => {
   await usersStore.getUsers()
   users.value = usersStore.users_list
-  console.log(users.value)
 })
 
 function goBack() {
@@ -215,6 +217,9 @@ function navigateToNewUser() {
   router.push('/admin/users/new')
 }
 
+function goHome() {
+  router.push('/home')
+}
 </script>
 
 <style scoped>

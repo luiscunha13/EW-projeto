@@ -26,6 +26,9 @@
           <button class="nav-item" @click="handleLogout">
             <span>Logout</span>
           </button>
+          <button v-if="currentUser.role === 'admin'" class="nav-item" @click="navigateToAdmin">
+            <span>Admin</span>
+          </button>
         </nav>
       </div>
 
@@ -186,7 +189,7 @@ const userInitial = computed(() => {
 
 // Get publications from store
 const publications = computed(() => {
-  return Object.values(publicationsStore.activePublications);
+  return Object.values(publicationsStore.activePublications).filter(pub => userStore.isFeedBanned(pub.user));
 });
 
 // Format time to relative format (e.g., "5m", "2h", "1d")
@@ -370,6 +373,10 @@ const navigateToUserProfile = (username) => {
 const navigateToCreatePost = () => {
   router.push(`/createpost`);
 };
+
+const navigateToAdmin = () => {
+  router.push('/admin')
+}
 
 const handleLogout = () => {
   authStore.logout();

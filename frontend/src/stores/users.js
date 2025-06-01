@@ -11,7 +11,8 @@ export const useUsersStore = defineStore('users', {
     }),
   
     getters: {
-        hasError: (state) => state.error !== null
+        hasError: (state) => state.error !== null,
+        isFeedBanned: (state) => { return (username) => state.users_list.some(user => user.username === username && user.feedBanned) },
     },
   
     actions: {
@@ -50,7 +51,7 @@ export const useUsersStore = defineStore('users', {
                         Authorization: `Bearer ${authStore.token}`,
                     },
                 });
-                console.log('User updated successfully:', response.data);
+                
                 const index = this.users_list.findIndex(user => user._id === userId);
                 if (index !== -1) {
                     this.users_list[index] = response.data;
