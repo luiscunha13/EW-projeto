@@ -27,6 +27,7 @@ export const useLogsStore = defineStore('logs', {
         },
 
         async addLog(log) {;
+            console.log('Adding log:', log);
             try {
                 const authStore = useAuthStore();
                 const response = await axios.post(`${API_URL}/logs`, 

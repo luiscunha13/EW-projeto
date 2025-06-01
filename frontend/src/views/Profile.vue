@@ -455,6 +455,13 @@ const exportPublications = async () => {
     );
     
     saveAs(content, `${profileUser.value.username}-posts-archive.zip`);
+    const log = {
+      action: `Exported publications from user @${profileUser.value.username}`,
+      user: authStore.user.username,
+      timestamp: (() => {const now = new Date(); now.setHours(now.getHours() + 1); return now;})()
+    }
+    console.log(log)
+    await logsStore.addLog(log);
     loading.value = null;
   } catch (err) {
     console.error('Error creating posts archive:', err);
@@ -470,13 +477,6 @@ const exportPublications = async () => {
     a.download = `${profileUser.value.username}-posts.json`;
     a.click();
     URL.revokeObjectURL(url);
-
-    const log = {
-      action: `Exported publications from user ${profileUser.value.username}`,
-      user: authStore.user.username,
-      timestamp: (() => {const now = new Date(); now.setHours(now.getHours() + 1); return now;})()
-    }
-    await logsStore.addLog(log);
   }
 };
 
@@ -507,6 +507,13 @@ const exportSinglePost = async (publication) => {
     // Generate the zip file
     const content = await zip.generateAsync({ type: 'blob' });
     saveAs(content, `${profileUser.value.username}-post-${publication.id}.zip`);
+    const log = {
+      action: `Exported publication (id: ${publication.id} - title: ${publication.title})`,
+      user: authStore.user.username,
+      timestamp: (() => {const now = new Date(); now.setHours(now.getHours() + 1); return now;})()
+    }
+    console.log(log)
+    await logsStore.addLog(log);
   } catch (err) {
     console.error('Error creating zip file:', err);
     // Fallback to JSON-only export if zip fails
@@ -522,12 +529,6 @@ const exportSinglePost = async (publication) => {
     a.click();
     URL.revokeObjectURL(url);
 
-    const log = {
-      action: `Exported publication (id: ${publication.id} - title: ${publication.title})`,
-      user: authStore.user.username,
-      timestamp: (() => {const now = new Date(); now.setHours(now.getHours() + 1); return now;})()
-    }
-    await logsStore.addLog(log);
   }
 };
 

@@ -106,7 +106,7 @@ export const useAuthStore = defineStore('auth', {
         if (!token) return false;
   
         try {
-          const now = ((() => {const now = new Date(); now.setHours(now.getHours() + 1); return now;})())(); // cache de 5 minutos
+          const now = (() => {const now = new Date(); now.setHours(now.getHours() + 1); return now;})(); // cache de 5 minutos
           if (this.tokenValidated && this.lastValidation && (now - this.lastValidation < 5 * 60 * 1000)) {
             return true;
           }
