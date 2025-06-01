@@ -401,6 +401,7 @@ router.post('/ingest', verifyTokenSimple, upload.single('sip'), async (req, res)
 
 router.get('/publications/visible', verifyTokenSimple, async (req, res) => {
     try {
+        console.log('Fetching all visible publications');   
         const metadataDocs = await Metadata.getMetadataPublic();
 
         // Create a zip containing all DIPs

@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import JSZip from 'jszip';
 import axios from 'axios';
+import { useAuthStore } from './auth';
 
 export const usePublicationsStore = defineStore('publications', () => {
     const activePublications = ref({});
@@ -213,6 +214,7 @@ export const usePublicationsStore = defineStore('publications', () => {
 
     const loadPublications = async (type, username = null) => {
         try {
+            const authStore = useAuthStore();
             loading.value = true;
             error.value = null;
 
@@ -222,17 +224,29 @@ export const usePublicationsStore = defineStore('publications', () => {
             switch (type) {
                 case 'visible':
                     response = await axios.get('http://localhost:14000/api/publications/visible', {
-                        responseType: 'arraybuffer'});
+                        responseType: 'arraybuffer',
+                        headers: {
+                            Authorization: `Bearer ${authStore.token}`,
+                        },
+                    });
                     break;
                 case 'user':
                     if (!username) throw new Error('Username required for user publications');
                     response = await axios.get(`http://localhost:14000/api/publications/user/${username}`, {
-                        responseType: 'arraybuffer'});
+                        responseType: 'arraybuffer',
+                        headers: {
+                            Authorization: `Bearer ${authStore.token}`,
+                        },
+                    });
                     break;
                 case 'self':
                     if (!username) throw new Error('Username required for self publications');
                     response = await axios.get(`http://localhost:14000/api/publications/self/${username}`, {
-                        responseType: 'arraybuffer'});
+                        responseType: 'arraybuffer',
+                        headers: {
+                            Authorization: `Bearer ${authStore.token}`,
+                        },
+                    });
                     break;
                 default:
                     throw new Error('Invalid publication type requested');
