@@ -125,6 +125,9 @@
             </div>
           </div>
         </div>
+        <div v-if="publications.length === 0 && !loading" class="empty-state">
+          <p>No posts to display</p>
+        </div>
       </main>
 
       <!-- Right Sidebar - User List (unchanged) -->
@@ -813,6 +816,12 @@ onUnmounted(() => {
 
 .comment-input button:hover {
   background-color: #1991db;
+}
+
+.empty-state {
+  padding: 40px;
+  text-align: center;
+  color: #666;
 }
 
 /* Avatar Styles */

@@ -58,8 +58,7 @@
           </div>
         </div>
 
-        <div v-if="loading" class="loading">Loading publications...</div>
-        <div v-else-if="error" class="error">{{ error }}</div>
+        <div v-if="error" class="error">{{ error }}</div>
         <div v-else class="posts-container">
           <div v-for="publication in publications" :key="publication.id" class="post">
             <div class="post-avatar">
@@ -78,7 +77,7 @@
                 <button 
                   class="edit-post-button" 
                   v-if="canEditPost(publication)"
-                  @click.stop="navigateToEditPost(publication.id)"
+                  @click.stop="navigateToEditPost(publication)"
                 >
                   Edit
                 </button>
@@ -196,12 +195,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted} from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch} from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { useUsersStore } from '../stores/users';
 import { useLogsStore } from '@/stores/logs';
 import { usePublicationsStore } from '../stores/pubs';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 
 const router = useRouter();
 const route = useRoute();
@@ -377,8 +378,11 @@ const navigateToCreatePost = () => {
   router.push('/createpost');
 };
 
-const navigateToEditPost = (postId) => {
-  router.push(`/editpost/${postId}`);
+const navigateToEditPost = (publication) => {
+  router.push({
+    path: `/editpost/${publication.id}`,
+    state: { publication }
+  });
 };
 
 const navigateToMetrics = () => {
@@ -390,32 +394,123 @@ const handleLogout = () => {
   router.push('/login');
 };
 
-const exportPublications = () => {
-  const data = {
-    user: profileUser.value,
-    posts: publications.value
-  };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${profileUser.value.username}-posts.json`;
-  a.click();
-  URL.revokeObjectURL(url);
+const exportPublications = async () => {
+  try {
+    const zip = new JSZip();
+    const rootFolder = zip.folder(`${profileUser.value.username}-posts`);
+    
+    // Create a metadata file with all posts info
+    const allPostsMetadata = {
+      user: profileUser.value,
+      postsCount: publications.value.length,
+      exportedAt: new Date().toISOString()
+    };
+    rootFolder.file('_metadata.json', JSON.stringify(allPostsMetadata, null, 2));
+    
+    // Process each post
+    for (const publication of publications.value) {
+      const postFolder = rootFolder.folder(`post-${publication.id}`);
+      
+      // Add post metadata
+      const postMetadata = {
+        ...publication,
+        // Remove files array from metadata since we're including the actual files
+        files: publication.files.map(file => ({
+          filename: file.filename,
+          mimeType: file.mimeType,
+          size: file.size
+        }))
+      };
+      postFolder.file('metadata.json', JSON.stringify(postMetadata, null, 2));
+      
+      // Add files to the post folder
+      for (const file of publication.files) {
+        try {
+          const response = await fetch(getFileUrl(file));
+          const blob = await response.blob();
+          postFolder.file(file.filename, blob);
+        } catch (err) {
+          console.error(`Error downloading file ${file.filename} for post ${publication.id}:`, err);
+          // Add a placeholder if file download fails
+          postFolder.file(`ERROR-${file.filename}.txt`, `Could not download original file: ${err.message}`);
+        }
+      }
+    }
+    
+    // Generate the zip file with progress indicator
+    const loadingMessage = `Preparing export (0/${publications.value.length} posts processed)`;
+    const loading = ref(loadingMessage);
+    
+    const content = await zip.generateAsync(
+      { type: 'blob' },
+      (metadata) => {
+        if (metadata.currentFile) {
+          loading.value = `Preparing export (${metadata.percent.toFixed(2)}% complete)`;
+        }
+      }
+    );
+    
+    saveAs(content, `${profileUser.value.username}-posts-archive.zip`);
+    loading.value = null;
+  } catch (err) {
+    console.error('Error creating posts archive:', err);
+    // Fallback to JSON-only export if zip fails
+    const data = {
+      user: profileUser.value,
+      posts: publications.value
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${profileUser.value.username}-posts.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 };
 
-const exportSinglePost = (publication) => {
-  const data = {
-    post: publication,
-    user: profileUser.value
-  };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${profileUser.value.username}-post-${publication.id}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
+const exportSinglePost = async (publication) => {
+  try {
+    const zip = new JSZip();
+    const folder = zip.folder(`${profileUser.value.username}-post-${publication.id}`);
+    
+    // Add metadata as JSON file
+    const metadata = {
+      post: publication,
+      user: profileUser.value
+    };
+    folder.file('metadata.json', JSON.stringify(metadata, null, 2));
+    
+    // Add files to the zip
+    for (const file of publication.files) {
+      try {
+        const response = await fetch(getFileUrl(file));
+        const blob = await response.blob();
+        folder.file(file.filename, blob);
+      } catch (err) {
+        console.error(`Error downloading file ${file.filename}:`, err);
+        // If fetching fails, you might want to add a placeholder or skip
+      }
+    }
+    
+    // Generate the zip file
+    const content = await zip.generateAsync({ type: 'blob' });
+    saveAs(content, `${profileUser.value.username}-post-${publication.id}.zip`);
+  } catch (err) {
+    console.error('Error creating zip file:', err);
+    // Fallback to JSON-only export if zip fails
+    const data = {
+      post: publication,
+      user: profileUser.value
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${profileUser.value.username}-post-${publication.id}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 };
 
 // Load profile data
@@ -456,6 +551,22 @@ onMounted(async () => {
   }
   await logsStore.addLog(log);
 });
+
+watch(
+  () => route.params.username,
+  async (newUsername) => {
+    await loadProfileData(newUsername);
+    
+    // Update the log for the new profile view
+    const log = {
+      action: `Visited profile of @${newUsername}`,
+      user: authStore.user.username,
+      timestamp: (() => {const now = new Date(); now.setHours(now.getHours() + 1); return now;})()
+    }
+    await logsStore.addLog(log);
+  },
+  { immediate: false } 
+);
 
 
 onUnmounted(() => {
@@ -1112,12 +1223,6 @@ onUnmounted(() => {
 
 .export-button:hover {
   background-color: #333;
-}
-
-.empty-state {
-  padding: 40px;
-  text-align: center;
-  color: #666;
 }
 
 .profile-info {

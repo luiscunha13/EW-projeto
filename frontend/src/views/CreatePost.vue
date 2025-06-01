@@ -246,6 +246,28 @@
           </div>
         </div>
       </main>
+
+      <div class="sidebar right-sidebar">
+        <div class="sidebar-header">
+          <h3>Users</h3>
+        </div>
+        <div class="users-list">
+          <div 
+            v-for="user in users" 
+            :key="user.id" 
+            class="user-item"
+            @click="navigateToUserProfile(user.username)"
+          >
+            <div class="user-avatar">
+              <div class="avatar small">{{ getInitial(user.name) }}</div>
+            </div>
+            <div class="user-details">
+              <div class="user-name">{{ user.name }}</div>
+              <div class="user-username">@{{ user.username }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -258,14 +280,16 @@ import { computed, ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { usePublicationsStore } from '../stores/pubs';
-import { useLogsStore } from '../stores/logs';
+import { useUsersStore } from '../stores/users';
 
 export default {
   setup() {
     const router = useRouter();
     const authStore = useAuthStore();
+    const usersStore = useUsersStore();
     
     const currentUser = authStore.user;
+    const users = ref([]);
 
     const userInitial = computed(() => {
       return currentUser.name.charAt(0);
@@ -283,10 +307,23 @@ export default {
       router.push(`/profile/${currentUser.username}`);
     };
 
+    const navigateToUserProfile = (username) => { 
+      router.push(`/profile/${username}`);
+    };
+
     const handleLogout = () => {
       authStore.logout();
       router.push('/login');
     };
+
+    onMounted(async () => {
+      try {
+        await usersStore.getUsers();
+        users.value = usersStore.users_list;
+      } catch (error) {
+        console.error('Error loading users:', error);
+      }
+    });
 
     return {
       currentUser,
@@ -294,7 +331,9 @@ export default {
       getInitial,
       navigateToHome,
       navigateToProfile,
+      navigateToUserProfile,
       handleLogout,
+      users
     };
   },
   data() {
@@ -457,16 +496,9 @@ export default {
           throw new Error(response.error || 'Failed to upload SIP');
         }
 
-        const logsStore = useLogsStore();
-        const log = {
-          action: `Created Post (id ${response.data.pubId} - title: ${response.data.pubTitle})`,
-          user: authStore.user.username,
-          timestamp: (() => {const now = new Date(); now.setHours(now.getHours() + 1); return now;})()
-        }
-        await logsStore.addLog(log);
-
         this.successMessage = 'Post uploaded successfully!';
         this.resetForm();
+
       } catch (error) {
         this.errorMessage = error.message;
         console.error('Error:', error);
@@ -520,7 +552,7 @@ export default {
 
 .layout {
   display: grid;
-  grid-template-columns: 1fr 3fr;
+  grid-template-columns: 1fr 2fr 1fr;
   max-width: 1400px;
   margin: 0 auto;
   min-height: 100vh;
@@ -845,6 +877,61 @@ export default {
   margin-top: 0;
   margin-bottom: 16px;
   color: #555;
+}
+
+.right-sidebar {
+  border-left: 1px solid #eaeaea;
+  background-color: white;
+}
+
+.sidebar-header {
+  padding: 16px 0;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.sidebar-header h3 {
+  font-size: 25px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.users-list {
+  margin-top: 16px;
+}
+
+.user-item {
+  display: flex;
+  padding: 12px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.user-item:hover {
+  background-color: #f5f5f5;
+}
+
+.user-avatar {
+  margin-right: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.user-name {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.user-username {
+  color: #666;
+  font-size: 15px;
+}
+
+.avatar.small {
+  width: 36px;
+  height: 36px;
+  font-size: 14px;
 }
 
 /* Avatar Styles */
