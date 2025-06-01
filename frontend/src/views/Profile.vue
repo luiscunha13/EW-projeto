@@ -23,9 +23,6 @@
           <button class="nav-item" @click="navigateToCreatePost">
             <span>Create Post</span>
           </button>
-          <button class="nav-item" @click="navigateToMetrics" v-if="canViewMetrics">
-            <span>Metrics</span>
-          </button>
           <button class="nav-item" @click="handleLogout">
             <span>Logout</span>
           </button>
@@ -82,6 +79,7 @@
                   Edit
                 </button>
               </div>
+              <span v-if="publication.occurrenceDate" class="post-time">  Occurred: {{ formatDate(publication.occurrenceDate) }}</span>
               <h3 class="post-title">{{ publication.title }}</h3>
               <div class="post-description">
                 {{ publication.description }}
@@ -242,6 +240,12 @@ const canViewMetrics = computed(() => {
 const canEditPost = (publication) => {
   return currentUser.value.role === 'admin' || 
          publication.user === currentUser.value.username;
+};
+
+const formatDate = (dateString) => {
+  if (!dateString) return '';
+  const options = { year: 'numeric', month: 'short', day: 'numeric' };
+  return new Date(dateString).toLocaleDateString(undefined, options);
 };
 
 // Helper functions

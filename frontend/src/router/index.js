@@ -12,7 +12,6 @@ import testPub from '@/views/testPub.vue';
 import Profile from '../views/Profile.vue';
 import NotFound from '../views/NotFound.vue'
 import EditPost from '@/views/EditPost.vue';
-import Metrics from '@/views/Metrics.vue';
 import CreateUser from '@/views/CreateUser.vue';
 
 const router = createRouter({
@@ -34,12 +33,13 @@ const router = createRouter({
     { path: '/home', 
       name: 'userhomepage', 
       component: UserHomePage,
-      //meta: { requiresAuth: true } // Rota que requer autenticação
+      meta: { requiresAuth: true } // Rota que requer autenticação
     }, 
     {
       path: '/createpost',
       name: 'createpost',
       component: CreatePost,
+      meta: { requiresAuth: true } // Rota que requer autenticação
     },
     {
       path: '/auth/callback',
@@ -49,51 +49,45 @@ const router = createRouter({
     {
       path: '/testpub',
       name: 'testPub',
-      component: testPub
+      component: testPub,
+      meta: { requiresAuth: true } // Rota que requer autenticação
     },
     {
       path: '/profile/:username',
       name: 'profile',
       component: Profile,
-      //meta: { requiresAuth: true } // Rota que requer autenticação
+      meta: { requiresAuth: true } // Rota que requer autenticação
     },
     {
       path: '/editpost/:id',
       name: 'editpost',
       component: EditPost,
-      //meta: { requiresAuth: true } // Rota que requer autenticação
+      meta: { requiresAuth: true } // Rota que requer autenticação
     },
-    {
-      'path': '/metrics',
-      'name': 'metrics',
-      component: Metrics,
-      //meta: { requiresAuth: true } // Rota que requer autenticação
-    },
-    
     // Exclusivo admin
     {
       path: '/admin',
       name: 'admin',
       component: AdminHome,
-      //meta: { requiresAdmin: true } // Rota que requer autenticação de admin
+      meta: { requiresAdmin: true } // Rota que requer autenticação de admin
     },
     {
       path: '/admin/users',
       name: 'users',
       component: UserManagement,
-      //meta: { requiresAdmin: true } // Rota que requer autenticação de admin
+      meta: { requiresAdmin: true } // Rota que requer autenticação de admin
     },
     {
       path: '/admin/logs',
       name: 'logs',
       component: Logs,
-      //meta: { requiresAdmin: true } // Rota que requer autenticação de admin
+      meta: { requiresAdmin: true } // Rota que requer autenticação de admin
     },
     {
       path: '/admin/users/new',
       name: 'createuser',
       component: CreateUser,
-      //meta: { requiresAdmin: true } // Rota que requer autenticação de admin
+      meta: { requiresAdmin: true } // Rota que requer autenticação de admin
     },
 
     {

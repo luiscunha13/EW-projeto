@@ -50,6 +50,7 @@
                 <span class="post-author">{{ publication.user }}</span>
                 <span class="post-time">· {{ formatTime(publication.createdAt) }}</span>
               </div>
+              <span v-if="publication.occurrenceDate" class="post-time">  Occurred: {{ formatDate(publication.occurrenceDate) }}</span>
               <h3 class="post-title">{{ publication.title }}</h3>
               <div class="post-description">
                 {{ publication.description }}
@@ -208,6 +209,12 @@ const formatTime = (timestamp) => {
   } else {
     return `${Math.floor(diff / 86400)}d`;
   }
+};
+
+const formatDate = (dateString) => {
+  if (!dateString) return '';
+  const options = { year: 'numeric', month: 'short', day: 'numeric' };
+  return new Date(dateString).toLocaleDateString(undefined, options);
 };
 
 // Get initial for avatar
