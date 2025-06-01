@@ -1,7 +1,7 @@
 <template>
   <div class="home-container">
     <div class="layout">
-      <!-- Left Sidebar -->
+      <!-- Left Sidebar (unchanged) -->
       <div class="sidebar left-sidebar">
         <div class="logo">
           <img src="@/assets/logo.png" alt="Logo" class="logo" />
@@ -35,24 +35,68 @@
           <h2>Home</h2>
         </div>
 
-        <div class="posts-container">
-          <div v-for="post in posts" :key="post.id" class="post">
+        <div v-if="loading" class="loading">Loading publications...</div>
+        <div v-else-if="error" class="error">{{ error }}</div>
+        <div v-else class="posts-container">
+          <div v-for="publication in publications" :key="publication.id" class="post">
             <div class="post-avatar">
-              <div class="avatar">{{ getInitial(post.author.name) }}</div>
+              <div class="avatar">{{ getInitial(publication.user) }}</div>
             </div>
             <div class="post-content">
               <div class="post-header">
-                <span class="post-author">{{ post.author.name }}</span>
-                <span class="post-username">@{{ post.author.username }}</span>
-                <span class="post-time">· {{ formatTime(post.timestamp) }}</span>
+                <span class="post-author">{{ publication.user }}</span>
+                <span class="post-time">· {{ formatTime(publication.createdAt) }}</span>
               </div>
-              <div class="post-text">
-                {{ post.content }}
+              <h3 class="post-title">{{ publication.title }}</h3>
+              <div class="post-description">
+                {{ publication.description }}
               </div>
+              <div class="post-resource-type">
+                <span class="resource-tag">{{ publication.resourceType }}</span>
+              </div>
+              
+              <!-- Display files if any -->
+              <div v-if="publication.files.length > 0" class="publication-files">
+                <div v-for="file in publication.files" :key="file.filename" class="file-preview">
+                  <!-- Image display -->
+                  <img v-if="isImageFile(file)" 
+                      :src="getFileUrl(file)" 
+                      :alt="file.filename" 
+                      class="file-media"
+                      @click="openMediaViewer(getFileUrl(file))">
+                  
+                  <!-- Video display -->
+                  <video v-else-if="isVideoFile(file)" 
+                        controls 
+                        class="file-media"
+                        @click.stop>
+                    <source :src="getMediaUrl(file)" :type="file.mimeType">
+                    Your browser does not support the video tag.
+                  </video>
+
+                  <div v-else-if="isAudioFile(file)" class="audio-player">
+                    <audio controls class="audio-element" @click.stop>
+                      <source :src="getMediaUrl(file)" :type="file.mimeType">
+                      Your browser does not support the audio element.
+                    </audio>
+                    <span class="audio-filename">{{ file.filename }}</span>
+                  </div>
+                  
+                  <!-- Other file types -->
+                  <a v-else :href="getFileUrl(file)" 
+                    target="_blank" 
+                    class="file-link"
+                    :download="file.filename">
+                    <span class="file-icon">📄</span>
+                    {{ file.filename }}
+                  </a>
+                </div>
+              </div>
+              
               <div class="post-actions">
                 <button class="action-button">
                   <span class="icon">💬</span>
-                  <span>{{ post.comments }}</span>
+                  <span>{{ publication.comments.length }}</span>
                 </button>
               </div>
             </div>
@@ -60,7 +104,7 @@
         </div>
       </main>
 
-      <!-- Right Sidebar - User List -->
+      <!-- Right Sidebar - User List (unchanged) -->
       <div class="sidebar right-sidebar">
         <div class="sidebar-header">
           <h3>Users</h3>
@@ -75,7 +119,7 @@
             <div class="user-avatar">
               <div class="avatar small">{{ getInitial(user.name) }}</div>
             </div>
-            <div class="user-info">
+            <div class="user-details">
               <div class="user-name">{{ user.name }}</div>
               <div class="user-username">@{{ user.username }}</div>
             </div>
@@ -87,17 +131,21 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { useUsersStore } from '../stores/users';
+import { usePublicationsStore } from '../stores/pubs';
 
 const router = useRouter();
 const authStore = useAuthStore();
 const userStore = useUsersStore();
-const newPostContent = ref('');
+const publicationsStore = usePublicationsStore();
+
 const currentUser = ref({});
 const users = ref([]);
+const loading = ref(false);
+const error = ref(null);
 
 // Computed property to get user initial for avatar
 const userInitial = computed(() => {
@@ -107,53 +155,16 @@ const userInitial = computed(() => {
   return currentUser.value.name.charAt(0);
 });
 
-// Sample posts data
-const posts = ref([
-  {
-    id: 1,
-    content: 'Just launched my new website! Check it out and let me know what you think.',
-    author: {
-      name: 'Sarah Johnson',
-      username: 'sarahj'
-    },
-    timestamp: new Date(Date.now() - 25 * 60000), // 25 minutes ago
-    likes: 24,
-    comments: 5,
-    reposts: 2,
-    liked: false
-  },
-  {
-    id: 2,
-    content: 'Working on a new design system for our product. Excited to share more details soon!',
-    author: {
-      name: 'Alex Chen',
-      username: 'alexc'
-    },
-    timestamp: new Date(Date.now() - 3 * 3600000), // 3 hours ago
-    likes: 42,
-    comments: 8,
-    reposts: 5,
-    liked: true
-  },
-  {
-    id: 3,
-    content: 'Just finished reading "Atomic Habits" by James Clear. Highly recommend it to anyone looking to build better habits!',
-    author: {
-      name: 'Emily Wilson',
-      username: 'emilyw'
-    },
-    timestamp: new Date(Date.now() - 5 * 3600000), // 5 hours ago
-    likes: 18,
-    comments: 3,
-    reposts: 1,
-    liked: false
-  }
-]);
+// Get publications from store
+const publications = computed(() => {
+  return Object.values(publicationsStore.activePublications);
+});
 
 // Format time to relative format (e.g., "5m", "2h", "1d")
 const formatTime = (timestamp) => {
+  const date = new Date(timestamp);
   const now = new Date();
-  const diff = Math.floor((now - timestamp) / 1000); // difference in seconds
+  const diff = Math.floor((now - date) / 1000); // difference in seconds
   
   if (diff < 60) {
     return `${diff}s`;
@@ -168,37 +179,90 @@ const formatTime = (timestamp) => {
 
 // Get initial for avatar
 const getInitial = (name) => {
-  return name.charAt(0);
+  return name?.charAt(0) || '?';
 };
 
-// Create a new post
-const createPost = () => {
-  if (!newPostContent.value.trim()) return;
-  
-  const newPost = {
-    id: posts.value.length + 1,
-    content: newPostContent.value,
-    author: {
-      name: currentUser.value.name,
-      username: currentUser.value.username
-    },
-    timestamp: new Date(),
-    likes: 0,
-    comments: 0,
-    reposts: 0,
-    liked: false
-  };
-  
-  posts.value.unshift(newPost);
-  newPostContent.value = '';
+const isImageFile = (file) => {
+  return file.mimeType.startsWith('image/') || 
+         ['.png', '.jpg', '.jpeg', '.gif', '.webp'].some(ext => 
+           file.filename.toLowerCase().endsWith(ext));
 };
 
-// Navigate to current user's profile
+const isVideoFile = (file) => {
+  const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi'];
+  return file.mimeType.startsWith('video/') || 
+         videoExtensions.some(ext => file.filename.toLowerCase().endsWith(ext));
+};
+
+const isAudioFile = (file) => {
+  const audioExtensions = ['.mp3', '.wav', '.ogg', '.m4a', '.flac'];
+  return file.mimeType.startsWith('audio/') || 
+         audioExtensions.some(ext => file.filename.toLowerCase().endsWith(ext));
+};
+
+const getMediaUrl = async (file) => {
+  // If we already have a blob URL, use it
+  if (file.blobUrl) return file.blobUrl;
+  
+  // If we have file data, create a blob URL
+  if (file.fileData) {
+    const blob = new Blob([file.fileData], { type: file.mimeType });
+    file.blobUrl = URL.createObjectURL(blob);
+    return file.blobUrl;
+  }
+  
+  // If we have a fileUrl, fetch and create blob
+  if (file.fileUrl && !file.fileUrl.startsWith('blob:')) {
+    try {
+      const response = await fetch(file.fileUrl);
+      const blob = await response.blob();
+      file.blobUrl = URL.createObjectURL(blob);
+      return file.blobUrl;
+    } catch (error) {
+      console.error('Error fetching media file:', error);
+      return file.fileUrl; // fallback to original URL
+    }
+  }
+  
+  // Fallback to whatever URL is available
+  return file.fileUrl;
+};
+
+// Helper to get proper file URL
+const getFileUrl = (file) => {
+  // If it's already a blob URL, use it directly
+  if (file.fileUrl && file.fileUrl.startsWith('blob:')) {
+    return file.fileUrl;
+  }
+  
+  // Otherwise create a blob URL from the file data
+  if (file.fileData) {
+    const blob = new Blob([file.fileData], { type: file.mimeType });
+    return URL.createObjectURL(blob);
+  }
+  
+  // Fallback to whatever URL is available
+  return file.fileUrl;
+};
+
+const openMediaViewer = (mediaUrl) => {
+  // Check if it's a blob URL
+  if (mediaUrl.startsWith('blob:')) {
+    // Create a temporary link to download the file
+    const link = document.createElement('a');
+    link.href = mediaUrl;
+    link.download = 'image.png'; // or extract filename from URL
+    link.click();
+  } else {
+    window.open(mediaUrl, '_blank');
+  }
+};
+
+// Navigation methods (unchanged)
 const navigateToProfile = () => {
   router.push(`/profile/${currentUser.value.username}`);
 };
 
-// Navigate to a specific user's profile
 const navigateToUserProfile = (username) => {
   router.push(`/profile/${username}`);
 };
@@ -207,7 +271,6 @@ const navigateToCreatePost = () => {
   router.push(`/createpost`);
 };
 
-// Handle logout
 const handleLogout = () => {
   authStore.logout();
   router.push('/login');
@@ -216,8 +279,28 @@ const handleLogout = () => {
 onMounted(async () => {
   currentUser.value = authStore.user;
 
-  await userStore.getUsers();
-  users.value = userStore.users_list;
+  try {
+    loading.value = true;
+    await userStore.getUsers();
+    users.value = userStore.users_list;
+    
+    // Load visible publications
+    await publicationsStore.loadPublications('visible');
+  } catch (err) {
+    error.value = err.message;
+  } finally {
+    loading.value = false;
+  }
+});
+
+onUnmounted(() => {
+  publications.value.forEach(pub => {
+    pub.files.forEach(file => {
+      if (file.fileUrl && file.fileUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(file.fileUrl);
+      }
+    });
+  });
 });
 </script>
 
@@ -416,6 +499,110 @@ onMounted(async () => {
   gap: 16px;
 }
 
+.post-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 8px 0;
+  line-height: 1.3;
+}
+
+.post-description {
+  font-size: 16px;
+  line-height: 1.5;
+  margin-bottom: 12px;
+  color: #333;
+}
+
+.post-resource-type {
+  margin-bottom: 12px;
+}
+
+.resource-tag {
+  display: inline-block;
+  padding: 4px 8px;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #666;
+}
+
+/* File display styles */
+.publication-files {
+  margin: 15px 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 15px;
+}
+
+.file-media {
+  max-width: 100%;
+  max-height: 400px;
+  border-radius: 8px;
+  object-fit: contain;
+  cursor: pointer;
+  background-color: #f5f5f5;
+  display: block; /* Ensure proper display */
+}
+
+.file-preview img {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 400px;
+}
+
+.file-media:hover {
+  opacity: 0.9;
+}
+
+.audio-player {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+}
+
+.audio-element {
+  width: 100%;
+}
+
+.audio-filename {
+  font-size: 14px;
+  color: #666;
+  word-break: break-all;
+}
+
+.file-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  color: #333;
+  text-decoration: none;
+}
+
+.file-link:hover {
+  background-color: #e0e0e0;
+}
+
+.file-icon {
+  font-size: 18px;
+}
+
+/* For single file display */
+.publication-files.single-file {
+  grid-template-columns: 1fr;
+}
+
+/* For multiple files */
+.publication-files.multiple-files {
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+
 .action-button {
   background: none;
   border: none;
@@ -504,5 +691,45 @@ onMounted(async () => {
 .user-username {
   color: #666;
   font-size: 15px;
+}
+
+.loading, .error {
+  padding: 20px;
+  text-align: center;
+}
+
+.error {
+  color: #ff0000;
+}
+
+.publication-files {
+  margin: 10px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.file-preview {
+  max-width: 100%;
+}
+
+.file-image {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.file-link {
+  display: inline-block;
+  padding: 8px 12px;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  color: #333;
+  text-decoration: none;
+}
+
+.file-link:hover {
+  background-color: #e0e0e0;
 }
 </style>

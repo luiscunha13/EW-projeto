@@ -3,7 +3,7 @@
     <div class="layout">
       <!-- Left Sidebar -->
       <div class="sidebar left-sidebar">
-        <div class="logo">
+        <div class="logo" @click="navigateToHome">
           <img src="@/assets/logo.png" alt="Logo" class="logo" />
         </div>
         <div class="user-info">
@@ -121,7 +121,7 @@
             <div class="user-avatar">
               <div class="avatar small">{{ getInitial(user.name) }}</div>
             </div>
-            <div class="user-info">
+            <div class="user-details">
               <div class="user-name">{{ user.name }}</div>
               <div class="user-username">@{{ user.username }}</div>
             </div>
@@ -192,7 +192,7 @@ const getInitial = (name) => {
 
 // Navigation functions
 const navigateToHome = () => {
-  router.push('/');
+  router.push('/home');
 };
 
 const navigateToUserProfile = (username) => {
@@ -355,6 +355,10 @@ watch(
 .right-sidebar {
   border-left: 1px solid #eaeaea;
   background-color: white;
+}
+
+.logo:hover {
+  cursor: pointer;
 }
 
 .logo {
