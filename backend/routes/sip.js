@@ -244,6 +244,7 @@ async function reconstructDIP(metadataDoc) {
     // Add manifest
     const manifest = {
         version: "1.0",
+        id: metadataDoc._id.toString(),
         created: metadataDoc.creationDate.toISOString(),
         occurenceDate: metadataDoc.occurrenceDate,
         title: metadataDoc.title,
@@ -481,6 +482,31 @@ router.get('/publications/self/:username', verifyTokenSimple, async (req, res) =
     } catch (err) {
         console.error('Error fetching user publications:', err);
         res.status(500).json({ error: 'Failed to fetch user publications' });
+    }
+});
+
+router.post('/publications/:id/comments', verifyTokenSimple, async (req, res) => {
+    try {
+        const publicationId = req.params.id;
+        const { username, comment } = req.body;
+
+        if (!comment || !username) {
+            return res.status(400).json({ error: 'Username and comment are required' });
+        }
+
+        // Add the comment to the publication
+        const commentObj = {
+            username,
+            comment,
+            date: new Date()
+        };
+
+        const updatedDoc = await Metadata.addComment(publicationId, commentObj);
+
+        res.status(200).json(updatedDoc);
+    } catch (err) {
+        console.error('Error adding comment:', err);
+        res.status(500).json({ error: 'Failed to add comment' });
     }
 });
 

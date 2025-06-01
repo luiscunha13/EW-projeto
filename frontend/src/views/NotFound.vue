@@ -17,7 +17,7 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 
 const navigateToHome = () => {
-  router.push('/');
+  router.push('/home');
 };
 </script>
 

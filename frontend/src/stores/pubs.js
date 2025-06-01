@@ -9,8 +9,6 @@ export const usePublicationsStore = defineStore('publications', () => {
     const loading = ref(false);
     const error = ref(null);
 
-    const publicationCache = ref(new Map());
-
     async function calculateSHA256(data) {
         let uint8Array;
         if (data instanceof ArrayBuffer) {
@@ -89,10 +87,7 @@ export const usePublicationsStore = defineStore('publications', () => {
         return results;
     }
 
-    const processDIP = async (zipData, dipId) => {
-        if (publicationCache.value.has(dipId)) {
-            return publicationCache.value.get(dipId);
-        }
+    const processDIP = async (zipData) => {
 
         try {
             const zip = await JSZip.loadAsync(zipData);
@@ -108,7 +103,7 @@ export const usePublicationsStore = defineStore('publications', () => {
             const files = await extractFilesFromDIP(zip, manifest);
 
             const publication = {
-                id: dipId,
+                id: manifest.id,
                 user: manifest.submitter,
                 occurrenceDate: manifest.occurenceDate,
                 title: manifest.title,
@@ -120,9 +115,6 @@ export const usePublicationsStore = defineStore('publications', () => {
                 createdAt: manifest.created,
                 ...getResourceSpecificFields(manifest)
             };
-
-            // Add to cache
-            publicationCache.value.set(dipId, publication);
             
             return publication;
         } catch (err) {
@@ -276,9 +268,8 @@ export const usePublicationsStore = defineStore('publications', () => {
             const dipFiles = Object.keys(masterZip.files).filter(f => f.endsWith('.zip'));
 
             const processingPromises = dipFiles.map(async filename => {
-                const dipId = filename.replace('.zip', '').replace('dip-', '');
                 const dipData = await masterZip.file(filename).async('arraybuffer');
-                return processDIP(dipData, dipId);
+                return processDIP(dipData);
             });
 
             const publications = await Promise.all(processingPromises);
@@ -306,13 +297,32 @@ export const usePublicationsStore = defineStore('publications', () => {
     };
 
     const getPublication = (id) => {
-        return activePublications.value[id] || publicationCache.value.get(id);
+        return activePublications.value[id];
     };
 
-    const addComment = (publicationId, username, comment) => {
-        const publication = activePublications.value[publicationId] || publicationCache.value.get(publicationId);
-        if (publication) {
-            publication.comments.push({ username, comment, createdAt: new Date() });
+    const addComment = async (publicationId, username, comment) => {
+        try {
+            const authStore = useAuthStore();
+            const response = await axios.post(
+                `http://localhost:14000/api/publications/${publicationId}/comments`,
+                { username, comment },
+                {
+                    headers: {
+                        Authorization: `Bearer ${authStore.token}`,
+                    },
+                }
+            );
+    
+            // Update local state
+            const publication = activePublications.value[publicationId];
+            if (publication) {
+                publication.comments.push(response.data.comments.slice(-1)[0]); // Add the new comment
+            }
+    
+            return response.data;
+        } catch (err) {
+            console.error('Error adding comment:', err);
+            throw err;
         }
     };
 

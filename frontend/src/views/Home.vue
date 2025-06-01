@@ -60,10 +60,10 @@
                 <div v-for="file in publication.files" :key="file.filename" class="file-preview">
                   <!-- Image display -->
                   <img v-if="isImageFile(file)" 
-                      :src="getFileUrl(file)" 
-                      :alt="file.filename" 
-                      class="file-media"
-                      @click="openMediaViewer(getFileUrl(file))">
+                    :src="getFileUrl(file)" 
+                    :alt="file.filename" 
+                    class="file-media"
+                    @click="openMediaViewer(getFileUrl(file), $event)">
                   
                   <!-- Video display -->
                   <video v-else-if="isVideoFile(file)" 
@@ -94,10 +94,33 @@
               </div>
               
               <div class="post-actions">
-                <button class="action-button">
+                <button class="action-button" @click="toggleComments(publication.id)">
                   <span class="icon">💬</span>
                   <span>{{ publication.comments.length }}</span>
                 </button>
+              </div>
+
+              <div v-if="expandedComments === publication.id" class="comments-section">
+                <div class="comment-list">
+                  <div v-for="comment in publication.comments" :key="comment.date" class="comment">
+                    <div class="comment-avatar">{{ getInitial(comment.username) }}</div>
+                    <div class="comment-content">
+                      <div class="comment-header">
+                        <span class="comment-author">@{{ comment.username }}</span>
+                        <span class="comment-time">· {{ formatTime(comment.date) }}</span>
+                      </div>
+                      <div class="comment-text">{{ comment.comment }}</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="comment-input">
+                  <input 
+                    v-model="newComments[publication.id]" 
+                    @keyup.enter="addComment(publication.id)" 
+                    placeholder="Write a comment..."
+                  />
+                  <button @click="addComment(publication.id)">Post</button>
+                </div>
               </div>
             </div>
           </div>
@@ -146,6 +169,9 @@ const currentUser = ref({});
 const users = ref([]);
 const loading = ref(false);
 const error = ref(null);
+const expandedComments = ref(null);
+const newComments = ref({});
+
 
 // Computed property to get user initial for avatar
 const userInitial = computed(() => {
@@ -243,16 +269,89 @@ const getFileUrl = (file) => {
   return file.fileUrl;
 };
 
-const openMediaViewer = (mediaUrl) => {
-  // Check if it's a blob URL
-  if (mediaUrl.startsWith('blob:')) {
-    // Create a temporary link to download the file
-    const link = document.createElement('a');
-    link.href = mediaUrl;
-    link.download = 'image.png'; // or extract filename from URL
-    link.click();
-  } else {
-    window.open(mediaUrl, '_blank');
+const openMediaViewer = (mediaUrl, event) => {
+  // Prevent default behavior (like downloading)
+  event.preventDefault();
+  event.stopPropagation();
+
+  // Create a modal to display the image
+  const modal = document.createElement('div');
+  modal.style.position = 'fixed';
+  modal.style.top = '0';
+  modal.style.left = '0';
+  modal.style.width = '100%';
+  modal.style.height = '100%';
+  modal.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+  modal.style.display = 'flex';
+  modal.style.justifyContent = 'center';
+  modal.style.alignItems = 'center';
+  modal.style.zIndex = '1000';
+  modal.style.cursor = 'zoom-out';
+  
+  // Create the image element
+  const img = document.createElement('img');
+  img.src = mediaUrl;
+  img.style.maxWidth = '90%';
+  img.style.maxHeight = '90%';
+  img.style.objectFit = 'contain';
+  img.style.transition = 'transform 0.1s ease';
+  
+  // Track zoom level
+  let scale = 1;
+  
+  // Handle wheel event for zooming
+  const handleWheel = (e) => {
+    e.preventDefault();
+    
+    // Determine zoom direction
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    
+    // Calculate new scale (limit between 0.5 and 5)
+    scale = Math.min(Math.max(0.5, scale + delta), 5);
+    
+    // Apply the scale transform
+    img.style.transform = `scale(${scale})`;
+  };
+  
+  // Reset zoom when double-clicked
+  const handleDblClick = () => {
+    scale = 1;
+    img.style.transform = `scale(${scale})`;
+  };
+  
+  // Add event listeners
+  modal.addEventListener('wheel', handleWheel, { passive: false });
+  img.addEventListener('dblclick', handleDblClick);
+  
+  // Close modal when clicked
+  modal.onclick = (e) => {
+    if (e.target === modal) {
+      modal.removeEventListener('wheel', handleWheel);
+      img.removeEventListener('dblclick', handleDblClick);
+      document.body.removeChild(modal);
+    }
+  };
+  
+  modal.appendChild(img);
+  document.body.appendChild(modal);
+};
+
+const toggleComments = (publicationId) => {
+  expandedComments.value = expandedComments.value === publicationId ? null : publicationId;
+};
+
+const addComment = async (publicationId) => {
+  if (!newComments.value[publicationId]?.trim()) return;
+  
+  try {
+    await publicationsStore.addComment(
+      publicationId,
+      authStore.user.username,
+      newComments.value[publicationId]
+    );
+    newComments.value[publicationId] = '';
+  } catch (err) {
+    console.error('Error adding comment:', err);
   }
 };
 
@@ -533,6 +632,12 @@ onUnmounted(() => {
   gap: 15px;
 }
 
+.modal-image {
+  max-width: 90%;
+  max-height: 90%;
+  object-fit: contain;
+}
+
 .file-media {
   max-width: 100%;
   max-height: 400px;
@@ -625,6 +730,89 @@ onUnmounted(() => {
 
 .liked {
   color: #e0245e;
+}
+
+.comments-section {
+  margin-top: 15px;
+  border-top: 1px solid #eaeaea;
+  padding-top: 10px;
+}
+
+.comment-list {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 10px;
+}
+
+.comment {
+  display: flex;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.comment-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #111;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+  margin-right: 10px;
+}
+
+.comment-content {
+  flex: 1;
+}
+
+.comment-header {
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.comment-author {
+  font-weight: 600;
+  color: #333;
+}
+
+.comment-time {
+  color: #666;
+  font-size: 12px;
+}
+
+.comment-text {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.comment-input {
+  display: flex;
+  margin-top: 10px;
+}
+
+.comment-input input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  outline: none;
+}
+
+.comment-input button {
+  margin-left: 8px;
+  padding: 8px 16px;
+  background-color: #111;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+}
+
+.comment-input button:hover {
+  background-color: #1991db;
 }
 
 /* Avatar Styles */
