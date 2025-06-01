@@ -41,7 +41,7 @@ router.post('/', async (req, res) => {
         return res.status(400).jsonp({ error: 'Missing required fields' });
     }
 
-    if (log.action !== 'login' && log.action !== 'register') {
+    if (log.action !== 'Login' && log.action !== 'Registration') {
         try {
             await verifyTokenReturn(req);
         } catch (err) {

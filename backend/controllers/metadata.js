@@ -32,3 +32,7 @@ module.exports.updateMetadata = (pubId, updateData) => {
         { new: true } 
     ).exec();
 }
+
+module.exports.deleteMetadataByUser = (username) => {
+    return Metadata.deleteMany({ user: username }).exec();
+}

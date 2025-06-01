@@ -216,8 +216,10 @@ router.delete('/users/:id', Auth.validateAndReturn, (req, res) => {
     });
   }
 
-  UserController.deleteUser(req.params.id).then(() => {
-    res.status(200).json({ message: 'Utilizador eliminado com sucesso' });
+  UserController.deleteUser(req.params.id).then((user) => {
+    console.log('Utilizador eliminado:', user);
+    // Eliminar publicações do utilizador
+    res.status(200).json({ message: 'Utilizador eliminado com sucesso', username: user.username });
   })
   .catch(err => {
     res.status(500).json(err);

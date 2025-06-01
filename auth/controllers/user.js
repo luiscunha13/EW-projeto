@@ -45,7 +45,7 @@ module.exports.updateUserPassword = (id, pwd) => {
 };
 
 module.exports.deleteUser = id => {
-    return User.deleteOne({ _id: id })
+    return User.findByIdAndDelete(id)
         .then(resposta => resposta)
         .catch(erro => erro);
 };

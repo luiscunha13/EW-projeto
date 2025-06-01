@@ -21,7 +21,13 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-router.use(cors());
+router.use(cors({
+  origin: 'http://localhost:5173',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+
 
 function calculateSHA256(buffer) {
     return crypto.createHash('sha256').update(buffer).digest('hex');
@@ -662,6 +668,22 @@ router.put('/publications/:id', verifyTokenSimple, upload.single('sip'), async (
     }
 });
 
+router.delete('/publications/:username', verifyTokenSimple, async (req, res) => {
+    try {
+        if (req.params.username !== req.loggedUser.username && !req.loggedUser.role === 'admin') {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+
+        const deletedCount = await Metadata.deleteMetadataByUser(req.params.username);
+
+        console.log(`Deleted ${deletedCount.deletedCount} publications for user ${req.params.username}`);
+        res.status(200).json({ success: true, deletedCount: deletedCount.deletedCount });
+
+    } catch (err) {
+        console.error('Error deleting publications:', err);
+        res.status(500).json({ error: 'Failed to delete publications' });
+    }
+});
 
 
 module.exports = router;

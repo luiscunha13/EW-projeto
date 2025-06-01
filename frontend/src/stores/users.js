@@ -4,6 +4,7 @@ import { useAuthStore } from './auth';
 import axios from 'axios';
 
 const AUTH_API_URL = 'http://localhost:13000';
+const API_URL = 'http://localhost:14000';
 
 export const useUsersStore = defineStore('users', {
     state: () => ({
@@ -41,6 +42,14 @@ export const useUsersStore = defineStore('users', {
                         Authorization: `Bearer ${authStore.token}`,
                     },
                 });
+                console.log('User deleted successfully:', response.data);
+                const username = response.data.username;
+                const response2 = await axios.delete(`${API_URL}/api/publications/${username}`, {
+                    headers: {
+                        Authorization: `Bearer ${authStore.token}`,
+                    },
+                });
+
                 console.log('User deleted successfully:', response.data);
                 this.users_list = this.users_list.filter(user => user._id !== userId);
                 return true
