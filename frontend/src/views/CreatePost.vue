@@ -393,7 +393,7 @@ export default {
           occurenceDate: this.sipMetadata.occurenceDate,
           title: this.sipMetadata.title,
           description: this.sipMetadata.description,
-          isPublic: this.sipMetadata.isPublic,
+          visibility: this.sipMetadata.isPublic,
           submitter: this.sipMetadata.submitter,
           resourceType: this.sipMetadata.resourceType,
           files: []
@@ -446,7 +446,7 @@ export default {
         zip.file('manifesto-SIP.json', JSON.stringify(manifest, null, 2));
         const zipBlob = await zip.generateAsync({ type: 'blob' });
               
-        //saveAs(zipBlob, 'sip_inspection.zip'); Para fazer download do sip
+        saveAs(zipBlob, 'sip_inspection.zip'); //Para fazer download do sip
         
         const formData = new FormData();
         formData.append('sip', zipBlob, 'submission.zip');

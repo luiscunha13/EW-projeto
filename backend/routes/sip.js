@@ -228,10 +228,10 @@ async function storeMetadata(manifest, storedFiles, submitter) {
             user: submitter,
             creationDate: new Date(manifest.created),
             lastModified: (() => {const now = new Date(); now.setHours(now.getHours() + 1); return now;})(),
-            occurrenceDate: manifest.occurrenceDate,
+            occurrenceDate: new Date(manifest.occurenceDate),
             title: manifest.title,
             description: manifest.description,
-            visibility: manifest.isPublic ? 'public' : 'private',
+            visibility: manifest.visibility ? 'public' : 'private',
             files: fileIds,
             resourceType: manifest.resourceType,
             comments: [] 
@@ -297,10 +297,11 @@ async function reconstructSIP(metadataDoc) {
         occurenceDate: metadataDoc.occurrenceDate,
         title: metadataDoc.title,
         description: metadataDoc.description,
-        isPublic: metadataDoc.visibility === 'public',
+        visibility: metadataDoc.visibility === 'public',
         submitter: metadataDoc.user,
         resourceType: metadataDoc.resourceType,
-        files: []
+        files: [],
+        comments: metadataDoc.comments || []
     };
 
     // Add resource-specific fields to manifest
