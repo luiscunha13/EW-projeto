@@ -49,11 +49,22 @@ export const usePublicationsStore = defineStore('publications', () => {
                 const fileName = fileInfo.filePath.split('/').pop();
                 
                 const fileUrl = URL.createObjectURL(fileData);
-                
+                let fileMetadata = null;
+                if (fileInfo.metadataPath) {
+                    let metadataEntry = zip.file(fileInfo.metadataPath);
+                    if (!metadataEntry) {
+                        const metadataFileName = fileInfo.metadataPath.replace(/^metadata\//, '');
+                        metadataEntry = zip.file(`metadata/${metadataFileName}`) || zip.file(metadataFileName);
+                    }
+                    if (metadataEntry) {
+                        const metadataData = await metadataEntry.async('string');
+                        fileMetadata = JSON.parse(metadataData);
+                    }
+                }
                 results.push({
                     filename: fileName,
                     fileUrl,
-                    mimeType: fileInfo.mimeType || 'application/octet-stream',
+                    mimeType: fileMetadata.mimeType || 'application/octet-stream',
                     size: fileInfo.size,
                     cleanUp: () => URL.revokeObjectURL(fileUrl) 
                 });

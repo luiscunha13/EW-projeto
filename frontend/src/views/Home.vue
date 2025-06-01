@@ -231,6 +231,7 @@ const getMediaUrl = async (file) => {
 // Helper to get proper file URL
 const getFileUrl = (file) => {
   // If it's already a blob URL, use it directly
+  console.log('getFileUrl called with file:', file);
   if (file.fileUrl && file.fileUrl.startsWith('blob:')) {
     return file.fileUrl;
   }
@@ -286,6 +287,7 @@ onMounted(async () => {
     
     // Load visible publications
     await publicationsStore.loadPublications('visible');
+    console.log('Publications loaded:', publications.value);
   } catch (err) {
     error.value = err.message;
   } finally {
