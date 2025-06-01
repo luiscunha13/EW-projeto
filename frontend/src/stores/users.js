@@ -12,7 +12,14 @@ export const useUsersStore = defineStore('users', {
   
     getters: {
         hasError: (state) => state.error !== null,
-        isFeedBanned: (state) => { return (username) => state.users_list.some(user => user.username === username && user.feedBanned) },
+        isFeedBanned: (state) => { return (username) => {
+            for (const user of state.users_list) {
+                if (user.username === username && user.feedBanned) {
+                    return true;
+                }
+            }
+            return false;
+        } },
     },
   
     actions: {

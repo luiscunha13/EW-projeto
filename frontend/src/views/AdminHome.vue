@@ -7,7 +7,10 @@
           <Shield class="header-icon" />
           <h1>Admin Panel</h1>
         </div>
-        <button class="logout-button" @click="logout">Logout</button>
+        <div>
+          <button class="logout-button" @click="goHome">Go Home</button>
+          <button class="logout-button" @click="logout">Logout</button>
+        </div>
       </div>
     </header>
 
@@ -74,6 +77,10 @@ function logout() {
   const authStore = useAuthStore()
   authStore.logout()
   router.push('/login')
+}
+
+function goHome() {
+  router.push('/home')
 }
 </script>
 

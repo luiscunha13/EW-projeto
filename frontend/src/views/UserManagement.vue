@@ -191,7 +191,12 @@ const confirmAction = async () => {
     if (userIndex !== -1) {
       const result = await usersStore.updateUser(selectedUser.value._id, { ...users.value[userIndex], feedBanned: !users.value[userIndex].feedBanned })
       if (result) {
-        users.value[userIndex].feedBanned = !users.value[userIndex].feedBanned
+        const temp_users = users.value.map(user => 
+            user._id === selectedUser.value._id 
+            ? { ...user, feedBanned: !user.feedBanned }
+            : user
+        )
+        users.value = temp_users
       }
     }
   }

@@ -277,7 +277,7 @@ export const usePublicationsStore = defineStore('publications', () => {
             publications.forEach(pub => {
                 activePublications.value[pub.id] = pub;
             });
-
+            console.log('PUBS', publications)
             return publications;
         } catch (err) {
             error.value = err.response?.data?.message || err.message;

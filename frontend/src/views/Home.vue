@@ -189,7 +189,8 @@ const userInitial = computed(() => {
 
 // Get publications from store
 const publications = computed(() => {
-  return Object.values(publicationsStore.activePublications).filter(pub => userStore.isFeedBanned(pub.user));
+  console.log('USERS',userStore.users_list)
+  return Object.values(publicationsStore.activePublications).filter(pub => !userStore.isFeedBanned(pub.user));
 });
 
 // Format time to relative format (e.g., "5m", "2h", "1d")
