@@ -44,11 +44,10 @@ export const usePublicationsStore = defineStore('publications', () => {
                 if (!fileEntry) {
                     throw new Error(`File not found: ${fileInfo.filePath}`);
                 }
-
+    
                 const fileData = await fileEntry.async('blob');
                 const fileName = fileInfo.filePath.split('/').pop();
                 
-                const fileUrl = URL.createObjectURL(fileData);
                 let fileMetadata = null;
                 if (fileInfo.metadataPath) {
                     let metadataEntry = zip.file(fileInfo.metadataPath);
@@ -61,12 +60,22 @@ export const usePublicationsStore = defineStore('publications', () => {
                         fileMetadata = JSON.parse(metadataData);
                     }
                 }
+    
+                // Create object URL for the blob
+                const fileUrl = URL.createObjectURL(fileData);
+                
+                // Determine if it's a media file
+                const isMedia = fileInfo.filePath.match(/\.(mp4|webm|ogg|mov|avi|mp3|wav|m4a|flac)$/i);
+                
                 results.push({
                     filename: fileName,
                     fileUrl,
-                    mimeType: fileMetadata.mimeType || 'application/octet-stream',
+                    blob: fileData, // Store the original blob
+                    mimeType: fileMetadata?.mimeType || fileData.type || 'application/octet-stream',
                     size: fileInfo.size,
-                    cleanUp: () => URL.revokeObjectURL(fileUrl) 
+                    cleanUp: () => {
+                        URL.revokeObjectURL(fileUrl);
+                    }
                 });
             } catch (err) {
                 console.error(`Error processing file ${fileInfo.filePath}:`, err);

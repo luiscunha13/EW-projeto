@@ -69,14 +69,14 @@
                   <video v-else-if="isVideoFile(file)" 
                         controls 
                         class="file-media"
-                        @click.stop>
-                    <source :src="getMediaUrl(file)" :type="file.mimeType">
+                        @click.stop
+                        :src="file.fileUrl">
                     Your browser does not support the video tag.
                   </video>
 
+                  <!-- Audio display -->
                   <div v-else-if="isAudioFile(file)" class="audio-player">
-                    <audio controls class="audio-element" @click.stop>
-                      <source :src="getMediaUrl(file)" :type="file.mimeType">
+                    <audio controls class="audio-element" @click.stop :src="file.fileUrl">
                       Your browser does not support the audio element.
                     </audio>
                     <span class="audio-filename">{{ file.filename }}</span>
@@ -184,20 +184,17 @@ const getInitial = (name) => {
 
 const isImageFile = (file) => {
   return file.mimeType.startsWith('image/') || 
-         ['.png', '.jpg', '.jpeg', '.gif', '.webp'].some(ext => 
-           file.filename.toLowerCase().endsWith(ext));
+         /\.(png|jpg|jpeg|gif|webp)$/i.test(file.filename);
 };
 
 const isVideoFile = (file) => {
-  const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi'];
   return file.mimeType.startsWith('video/') || 
-         videoExtensions.some(ext => file.filename.toLowerCase().endsWith(ext));
+         /\.(mp4|webm|ogg|mov|avi)$/i.test(file.filename);
 };
 
 const isAudioFile = (file) => {
-  const audioExtensions = ['.mp3', '.wav', '.ogg', '.m4a', '.flac'];
   return file.mimeType.startsWith('audio/') || 
-         audioExtensions.some(ext => file.filename.toLowerCase().endsWith(ext));
+         /\.(mp3|wav|ogg|m4a|flac)$/i.test(file.filename);
 };
 
 const getMediaUrl = async (file) => {

@@ -22,6 +22,7 @@
         <div class="files">
           <h4>Files ({{ pub.files.length }})</h4>
           <div v-for="file in pub.files" :key="file.filename" class="file">
+            <h4>Mimetype ({{ file.mimeType }})</h4>
             <p>{{ file.filename }} ({{ file.size }} bytes)</p>
             <div v-if="file.mimeType.startsWith('text/')">
               <button @click="viewFile(file)">View Text</button>
