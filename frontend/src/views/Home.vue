@@ -87,24 +87,23 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
+import { useUsersStore } from '../stores/users';
 
 const router = useRouter();
 const authStore = useAuthStore();
+const userStore = useUsersStore();
 const newPostContent = ref('');
-
-// Current user data
-const currentUser = ref({
-  id: 1,
-  name: 'John Doe',
-  username: 'johndoe',
-  email: 'john@example.com'
-});
+const currentUser = ref({});
+const users = ref([]);
 
 // Computed property to get user initial for avatar
 const userInitial = computed(() => {
+  if (!currentUser.value || !currentUser.value.name) {
+    return '';
+  }
   return currentUser.value.name.charAt(0);
 });
 
@@ -151,30 +150,6 @@ const posts = ref([
   }
 ]);
 
-// Sample users data
-const users = ref([
-  {
-    id: 2,
-    name: 'Sarah Johnson',
-    username: 'sarahj'
-  },
-  {
-    id: 3,
-    name: 'Alex Chen',
-    username: 'alexc'
-  },
-  {
-    id: 4,
-    name: 'Emily Wilson',
-    username: 'emilyw'
-  },
-  {
-    id: 5,
-    name: 'Michael Brown',
-    username: 'michaelb'
-  }
-]);
-
 // Format time to relative format (e.g., "5m", "2h", "1d")
 const formatTime = (timestamp) => {
   const now = new Date();
@@ -218,12 +193,6 @@ const createPost = () => {
   newPostContent.value = '';
 };
 
-// Like/unlike a post
-const likePost = (post) => {
-  post.liked = !post.liked;
-  post.likes += post.liked ? 1 : -1;
-};
-
 // Navigate to current user's profile
 const navigateToProfile = () => {
   router.push(`/profile/${currentUser.value.username}`);
@@ -243,6 +212,13 @@ const handleLogout = () => {
   authStore.logout();
   router.push('/login');
 };
+
+onMounted(async () => {
+  currentUser.value = authStore.user;
+
+  await userStore.getUsers();
+  users.value = userStore.users_list;
+});
 </script>
 
 <style scoped>
