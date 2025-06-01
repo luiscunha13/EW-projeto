@@ -254,7 +254,7 @@
 import JSZip from 'jszip'; 
 import axios from 'axios';
 import { saveAs } from 'file-saver';
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { usePublicationsStore } from '../stores/pubs';
@@ -264,15 +264,10 @@ export default {
     const router = useRouter();
     const authStore = useAuthStore();
     
-    const currentUser = ref({
-      id: 1,
-      name: 'John Doe',
-      username: 'johndoe',
-      email: 'john@example.com'
-    });
+    const currentUser = authStore.user;
 
     const userInitial = computed(() => {
-      return currentUser.value.name.charAt(0);
+      return currentUser.name.charAt(0);
     });
 
     const getInitial = (name) => {
@@ -284,7 +279,7 @@ export default {
     };
 
     const navigateToProfile = () => {
-      router.push(`/profile/${currentUser.value.username}`);
+      router.push(`/profile/${currentUser.username}`);
     };
 
     const handleLogout = () => {
@@ -302,12 +297,13 @@ export default {
     };
   },
   data() {
+    const authStore = useAuthStore();
     return {
       sipMetadata: {
         title: '',
         description: '',
         isPublic: false,
-        submitter: 'fausto',
+        submitter: authStore.user.username,
         creationDate: new Date().toISOString().split('T')[0],
         occurenceDate: '',
         resourceType: '',
@@ -490,11 +486,12 @@ export default {
       return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     },
     resetForm() {
+      const authStore = useAuthStore();
       this.sipMetadata = {
         title: '',
         description: '',
         isPublic: false,
-        submitter: 'fausto',
+        submitter: authStore.user.username,
         creationDate: new Date().toISOString().split('T')[0],
         resourceType: ''
       };
