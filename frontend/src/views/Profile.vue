@@ -142,6 +142,7 @@ import { useUsersStore } from '../stores/users';
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
+const logsStore = useLogsStore();
 const usersStore = useUsersStore();
 
 const currentUser = computed(() => authStore.user);
@@ -298,7 +299,7 @@ onMounted(async () => {
     user: authStore.user.username,
     timestamp: (() => {const now = new Date(); now.setHours(now.getHours() + 1); return now;})()
   }
-  await useLogsStore().addLog(log);
+  await logsStore.addLog(log);
 });
 
 watch(

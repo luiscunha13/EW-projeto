@@ -400,6 +400,8 @@ router.post('/ingest', verifyTokenSimple, upload.single('sip'), async (req, res)
 
         res.status(201).jsonp({
             success: true,
+            pubId: metadataDoc._id,
+            pubTitle: metadataDoc.title,
         });
 
     } catch (error) {

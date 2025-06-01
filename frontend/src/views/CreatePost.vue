@@ -258,6 +258,7 @@ import { computed, ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { usePublicationsStore } from '../stores/pubs';
+import { useLogsStore } from '../stores/logs';
 
 export default {
   setup() {
@@ -456,9 +457,16 @@ export default {
           throw new Error(response.error || 'Failed to upload SIP');
         }
 
+        const logsStore = useLogsStore();
+        const log = {
+          action: `Created Post (id ${response.data.pubId} - title: ${response.data.pubTitle})`,
+          user: authStore.user.username,
+          timestamp: (() => {const now = new Date(); now.setHours(now.getHours() + 1); return now;})()
+        }
+        await logsStore.addLog(log);
+
         this.successMessage = 'Post uploaded successfully!';
         this.resetForm();
-
       } catch (error) {
         this.errorMessage = error.message;
         console.error('Error:', error);
