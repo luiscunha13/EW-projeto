@@ -172,7 +172,7 @@ router.put('/users/:id', Auth.validateAndReturn, (req, res) => {
   const updateData = req.body;
 
   UserController.updateUser(req.params.id, updateData).then(() => {
-    res.status(200).json({ message: 'Utilizador atualizado com sucesso' });
+    res.status(200).json(updateData);
   })
   .catch(err => {
     res.status(500).json(err);
