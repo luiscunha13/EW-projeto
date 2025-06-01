@@ -79,4 +79,4 @@ Para armazenar as informações foi criada uma base de dados em MongoDB a correr
 
 A base de dados *EWprojeto* possui várias coleções para armazenar os diversos dados que a aplicação precisa.
 
-Para correr a aplicação é necessário ter este serviço a correr também.
+Para correr a aplicação é necessário ter este serviço a correr também, na porta, tanto externa quanto interna, **27017**.
