@@ -173,8 +173,7 @@ export const useAuthStore = defineStore('auth', {
         // Limpar dados locais independentemente do resultado
         this.token = null;
         this.user_id = "";
-        this.role = "";
-        this.username = "";
+        this.user = null;
         this.tokenValidated = false;
         this.lastValidation = null;
         localStorage.removeItem('token');

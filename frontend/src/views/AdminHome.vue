@@ -23,7 +23,7 @@
       <!-- Admin Options Grid -->
       <div class="options-grid">
         <!-- Users Management Card -->
-        <router-link to="/admin/usermanagement" class="option-card users-card">
+        <router-link to="/admin/users" class="option-card users-card">
           <div class="card-icon">
             <Users class="icon" />
           </div>

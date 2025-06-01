@@ -179,6 +179,36 @@ router.put('/users/:id', Auth.validateAndReturn, (req, res) => {
   });
 });
 
+router.post('/users', Auth.validateAndReturn, (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({
+      message: 'User sem permissão para criar utilizadores'
+    });
+  }
+
+  const now = (() => {const now = new Date(); now.setHours(now.getHours() + 1); return now;})()
+  User.register(new User({
+    username: req.body.username,
+    name: req.body.name,
+    role: req.body.role || 'user',
+    lastLogin: null,
+    createdAt: now,
+    authMethods: {
+      google: null,
+    }
+  }),
+  req.body.password,
+  (err, registeredUser) => {
+    if (err) {
+      console.error('Erro ao registar user:', err);
+      return res.status(500).jsonp(err);
+    }
+    
+    res.status(201).jsonp(registeredUser); 
+  });
+});
+
+
 router.delete('/users/:id', Auth.validateAndReturn, (req, res) => {
   if (req.user.role !== 'admin') {
     return res.status(403).json({

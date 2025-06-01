@@ -375,8 +375,7 @@ export default {
 
       try {
         if (!this.sipMetadata.title) throw new Error('SIP title is required');
-        if (!this.sipMetadata.resourceType) throw new Error('Resource type is required');
-        if (this.fileItems.length === 0) throw new Error('At least one file is required');
+        if (!this.sipMetadata.resourceType) throw new Error('Resource type is required'); 
         
         for (const fileItem of this.fileItems) {
           if (!fileItem.file) throw new Error('All files must be selected');

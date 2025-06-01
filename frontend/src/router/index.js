@@ -13,6 +13,7 @@ import Profile from '../views/Profile.vue';
 import NotFound from '../views/NotFound.vue'
 import EditPost from '@/views/EditPost.vue';
 import Metrics from '@/views/Metrics.vue';
+import CreateUser from '@/views/CreateUser.vue';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -77,8 +78,8 @@ const router = createRouter({
       //meta: { requiresAdmin: true } // Rota que requer autenticação de admin
     },
     {
-      path: '/admin/usermanagement',
-      name: 'usermanagement',
+      path: '/admin/users',
+      name: 'users',
       component: UserManagement,
       //meta: { requiresAdmin: true } // Rota que requer autenticação de admin
     },
@@ -88,6 +89,13 @@ const router = createRouter({
       component: Logs,
       //meta: { requiresAdmin: true } // Rota que requer autenticação de admin
     },
+    {
+      path: '/admin/users/new',
+      name: 'createuser',
+      component: CreateUser,
+      //meta: { requiresAdmin: true } // Rota que requer autenticação de admin
+    },
+
     {
       path: '/:pathMatch(.*)*',
       name: 'NotFound',

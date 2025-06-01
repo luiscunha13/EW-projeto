@@ -19,7 +19,6 @@
 
     <!-- Main Content -->
     <main class="main-content">
-      <!-- Search Bar -->
       <div class="search-container">
         <div class="search-wrapper">
           <Search class="search-icon" />
@@ -30,6 +29,10 @@
             class="search-input"
           />
         </div>
+        <button class="new-user-button" @click="navigateToNewUser">
+          <Plus class="plus-icon" />
+          New User
+        </button>
       </div>
 
       <!-- Users Grid -->
@@ -139,7 +142,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { Shield, Users, Search, Ban, Trash2 } from 'lucide-vue-next'
+import { Shield, Users, Search, Ban, Trash2, Plus } from 'lucide-vue-next'
 import { useUsersStore } from '../stores/users'
 import { useRouter } from 'vue-router'
 const router = useRouter()
@@ -201,10 +204,15 @@ const cancelAction = () => {
 onMounted(async () => {
   await usersStore.getUsers()
   users.value = usersStore.users_list
+  console.log(users.value)
 })
 
 function goBack() {
   router.push('/admin')
+}
+
+function navigateToNewUser() {
+  router.push('/admin/users/new')
 }
 
 </script>
@@ -295,12 +303,59 @@ function goBack() {
 
 /* Search Bar */
 .search-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 32px;
-  max-width: 400px;
+  gap: 16px;
 }
 
 .search-wrapper {
   position: relative;
+  flex: 1;
+  max-width: 400px;
+}
+
+.new-user-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background-color: #111;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.new-user-button:hover {
+  background-color: #333;
+}
+
+.plus-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .search-container {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .search-wrapper {
+    max-width: 100%;
+    width: 100%;
+  }
+  
+  .new-user-button {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 .search-input {

@@ -61,5 +61,22 @@ export const useUsersStore = defineStore('users', {
                 return false;
             }
         },
+
+        async createUser(userData) {
+            const authStore = useAuthStore();
+            try {
+                const response = await axios.post(`${AUTH_API_URL}/users`, userData, {
+                    headers: {
+                        Authorization: `Bearer ${authStore.token}`,
+                    },
+                });
+                console.log('User created successfully:', response.data);
+                this.users_list.push(response.data);
+                return true;
+            } catch (error) {
+                console.error('Error creating user:', error);
+                return false;
+            }
+        },
     },
 });
