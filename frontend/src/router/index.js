@@ -8,6 +8,7 @@ import AuthCallback from '../views/AuthCallback.vue';
 import AdminHome from '../views/AdminHome.vue';
 import UserManagement from '../views/UserManagement.vue';
 import Logs from '../views/Logs.vue';
+import testPub from '@/views/testPub.vue';
 
 
 const router = createRouter({
@@ -40,6 +41,11 @@ const router = createRouter({
       path: '/auth/callback',
       name: 'AuthCallback',
       component: AuthCallback,
+    },
+    {
+      path: '/testpub',
+      name: 'testPub',
+      component: testPub
     },
     
     // Exclusivo admin

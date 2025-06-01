@@ -446,7 +446,7 @@ export default {
         zip.file('manifesto-SIP.json', JSON.stringify(manifest, null, 2));
         const zipBlob = await zip.generateAsync({ type: 'blob' });
               
-        saveAs(zipBlob, 'sip_inspection.zip'); //Para fazer download do sip
+        //saveAs(zipBlob, 'sip_inspection.zip'); //Para fazer download do sip
         
         const formData = new FormData();
         formData.append('sip', zipBlob, 'submission.zip');
@@ -458,8 +458,6 @@ export default {
 
         this.successMessage = 'Post uploaded successfully!';
         this.resetForm();
-
-        publicationsStore.fetchVisiblePublications(); 
 
       } catch (error) {
         this.errorMessage = error.message;
