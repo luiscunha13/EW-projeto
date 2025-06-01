@@ -126,13 +126,27 @@ async function processAndStoreFiles(zip, manifest, storagePath, submitter) {
             const fileData = await fileEntry.async('nodebuffer');
             const fileName = path.basename(fileInfo.filePath);
             const fileStoragePath = path.join(storagePath, fileName);
+            let fileMetadata = null;
+            if (fileInfo.metadataPath) {
+                let metadataEntry = zip.file(fileInfo.metadataPath);
+                if (!metadataEntry) {
+                    const metadataFileName = fileInfo.metadataPath.replace(/^metadata\//, '');
+                    metadataEntry = zip.file(`metadata/${metadataFileName}`) || zip.file(metadataFileName);
+                }
+                if (metadataEntry) {
+                    const metadataData = await metadataEntry.async('string');
+                    fileMetadata = JSON.parse(metadataData);
+                }
+            }
             fs.writeFileSync(fileStoragePath, fileData);
-
-            // Store file info in MongoDB
+            console.log(`file ${JSON.stringify(fileInfo)}`);
+            console.log(`Stored file: ${fileName} type ${fileInfo.mimeType}`);
+            console.log (`metadata: ${JSON.stringify(fileMetadata)}`);
+            // Store file info in MongoDB   
             const fileInfoDoc = await FileInfo.create({
                 filename: fileName,
                 file_path: fileStoragePath,
-                mimeType: fileInfo.mimeType || 'application/octet-stream',
+                mimeType: fileMetadata.mimeType || 'application/octet-stream',
                 size: fileInfo.size
             });
 
