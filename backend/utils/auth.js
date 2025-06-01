@@ -49,5 +49,29 @@ const verifyTokenSimple = async (req, res, next) => {
     }
 }
 
+const verifyTokenReturn = async (req) => {
+  const token = req.query.token || req.body.token || req.get('Authorization');
+  if (!token) {
+    throw new Error('No token provided');
+  }
+
+  try {
+    const response = await axios.get('http://localhost:13000/verify', {
+      headers: {
+        Authorization: token,
+      },
+    });
+    
+    if (response.data && response.data.valid) {
+      return true;
+    } else {
+      throw new Error('Invalid token');
+    }
+  } catch (err) {
+    throw new Error('Token verification failed: ' + err.message);
+  }
+};
+
 module.exports.verifyTokenSimple = verifyTokenSimple;
 module.exports.verifyToken = verifyToken;
+module.exports.verifyTokenReturn = verifyTokenReturn;

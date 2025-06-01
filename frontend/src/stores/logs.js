@@ -28,7 +28,13 @@ export const useLogsStore = defineStore('logs', {
 
         async addLog(log) {;
             try {
-                const response = await axios.post(`${API_URL}/logs`, { body: log });
+                const authStore = useAuthStore();
+                const response = await axios.post(`${API_URL}/logs`, 
+                    { log }, 
+                    { headers: {
+                            Authorization: `Bearer ${authStore.token}`,
+                        }, 
+                    });
                 console.log('Log added successfully:', response.data);
                 return true
             } catch (error) {

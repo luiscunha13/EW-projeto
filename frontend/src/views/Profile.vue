@@ -136,6 +136,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
+import { useLogsStore } from '@/stores/logs';
 import { useUsersStore } from '../stores/users';
 
 const router = useRouter();
@@ -291,6 +292,13 @@ const loadPosts = (username) => {
 onMounted(async () => {
   await usersStore.getUsers();
   loadProfileData(route.params.username);
+  
+  const log = {
+    action: `Visited profile of @${route.params.username}`,
+    user: authStore.user.username,
+    timestamp: (() => {const now = new Date(); now.setHours(now.getHours() + 1); return now;})()
+  }
+  await useLogsStore().addLog(log);
 });
 
 watch(

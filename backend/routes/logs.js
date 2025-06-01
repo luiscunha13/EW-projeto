@@ -1,9 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const Logs = require('../controllers/logs');
-const axios = require('axios');
 const cors = require('cors');
-const verifyToken = require('../utils/auth').verifyToken;
+const { verifyTokenSimple, verifyToken, verifyTokenReturn } = require('../utils/auth');
 
 router.use(cors({
   origin: 'http://localhost:5173',
@@ -35,11 +34,20 @@ router.get('/:username', (req, res) => {
     });
 });
 
-router.post('/', (req, res) => {
-    const log = {user: req.body.body.user, timestamp: req.body.body.timestamp, action: req.body.body.action};
-    console.log('Received log:', log);
+router.post('/', async (req, res) => {
+    const log = {user: req.body.log.user, timestamp: req.body.log.timestamp, action: req.body.log.action};
+
     if (!log.user || !log.timestamp || !log.action) {
         return res.status(400).jsonp({ error: 'Missing required fields' });
+    }
+
+    if (log.action !== 'login' && log.action !== 'register') {
+        try {
+            await verifyTokenReturn(req);
+        } catch (err) {
+            console.error('Token verification failed:', err.message);
+            return res.status(401).jsonp({ error: 'Invalid token' });
+        }
     }
     
     Logs.addLog(log)
