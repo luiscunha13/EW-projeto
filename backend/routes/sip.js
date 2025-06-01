@@ -286,8 +286,8 @@ async function storeMetadata(manifest, storedFiles, submitter) {
     }
 }
 
-// Helper function to reconstruct SIP for a single publication
-async function reconstructSIP(metadataDoc) {
+// Helper function to reconstruct DIP for a single publication
+async function reconstructDIP(metadataDoc) {
     const zip = new JSZip();
     
     // Add manifest
@@ -376,7 +376,7 @@ async function reconstructSIP(metadataDoc) {
     }
 
     // Add manifest to zip
-    zip.file('manifesto-SIP.json', JSON.stringify(manifest, null, 2));
+    zip.file('manifesto-DIP.json', JSON.stringify(manifest, null, 2));
     
     // Generate the zip file
     return zip.generateAsync({ type: 'nodebuffer' });
@@ -395,18 +395,17 @@ function generateSHA256(data) {
     }
 }
 
-// Get all visible publications as SIPs
 router.get('/publications/visible', async (req, res) => {
     try {
         const metadataDocs = await Metadata.find({ visibility: 'public' })
             .sort({ creationDate: -1 });
 
-        // Create a zip containing all SIPs
+        // Create a zip containing all DIPs
         const masterZip = new JSZip();
         
         for (const doc of metadataDocs) {
-            const sipBuffer = await reconstructSIP(doc);
-            masterZip.file(`sip-${doc._id}.zip`, sipBuffer);
+            const dipBuffer = await reconstructDIP(doc);
+            masterZip.file(`dip-${doc._id}.zip`, dipBuffer);
         }
 
         const zipData = await masterZip.generateAsync({ type: 'nodebuffer' });
@@ -419,19 +418,18 @@ router.get('/publications/visible', async (req, res) => {
     }
 });
 
-// Get user's publications as SIPs
 router.get('/publications/user/:username', async (req, res) => {
     try {
 
         const metadataDocs = await Metadata.find({user: req.params.username, visibility: 'public'})
             .sort({ creationDate: -1 });
 
-        // Create a zip containing all SIPs
+        // Create a zip containing all DIPs
         const masterZip = new JSZip();
         
         for (const doc of metadataDocs) {
-            const sipBuffer = await reconstructSIP(doc);
-            masterZip.file(`sip-${doc._id}.zip`, sipBuffer);
+            const dipBuffer = await reconstructDIP(doc);
+            masterZip.file(`dip-${doc._id}.zip`, dipBuffer);
         }
 
         const zipData = await masterZip.generateAsync({ type: 'nodebuffer' });
@@ -449,12 +447,12 @@ router.get('/publications/self/:username', async (req, res) => {
         const metadataDocs = await Metadata.find({user: req.params.username})
             .sort({ creationDate: -1 });
 
-        // Create a zip containing all SIPs
+        // Create a zip containing all DIPs
         const masterZip = new JSZip();
         
         for (const doc of metadataDocs) {
-            const sipBuffer = await reconstructSIP(doc);
-            masterZip.file(`sip-${doc._id}.zip`, sipBuffer);
+            const dipBuffer = await reconstructDIP(doc);
+            masterZip.file(`dip-${doc._id}.zip`, dipBuffer);
         }
 
         const zipData = await masterZip.generateAsync({ type: 'nodebuffer' });

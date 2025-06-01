@@ -2,20 +2,15 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import JSZip from 'jszip';
 import axios from 'axios';
-import crypto from 'crypto';
 
 export const usePublicationsStore = defineStore('publications', () => {
-    // Active publications in memory (cleared when not needed)
     const activePublications = ref({});
     const loading = ref(false);
     const error = ref(null);
 
-    // Cache for already processed publications (optional optimization)
     const publicationCache = ref(new Map());
 
-    // Helper function to calculate SHA-256 hash
     async function calculateSHA256(data) {
-        // Convert different input types to Uint8Array
         let uint8Array;
         if (data instanceof ArrayBuffer) {
             uint8Array = new Uint8Array(data);
@@ -31,14 +26,12 @@ export const usePublicationsStore = defineStore('publications', () => {
             throw new Error('Unsupported data type for SHA-256 calculation');
         }
     
-        // Calculate hash using Web Crypto API
         const hashBuffer = await window.crypto.subtle.digest('SHA-256', uint8Array);
         const hashArray = Array.from(new Uint8Array(hashBuffer));
         return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
-    // Process and extract files from SIP (without permanent storage)
-    async function extractFilesFromSIP(zip, manifest) {
+    async function extractFilesFromDIP(zip, manifest) {
         const results = [];
         
         for (const fileInfo of manifest.files) {
@@ -54,7 +47,6 @@ export const usePublicationsStore = defineStore('publications', () => {
                 const fileData = await fileEntry.async('blob');
                 const fileName = fileInfo.filePath.split('/').pop();
                 
-                // Create object URL for temporary access
                 const fileUrl = URL.createObjectURL(fileData);
                 
                 results.push({
@@ -62,7 +54,7 @@ export const usePublicationsStore = defineStore('publications', () => {
                     fileUrl,
                     mimeType: fileInfo.mimeType || 'application/octet-stream',
                     size: fileInfo.size,
-                    cleanUp: () => URL.revokeObjectURL(fileUrl) // Cleanup function
+                    cleanUp: () => URL.revokeObjectURL(fileUrl) 
                 });
             } catch (err) {
                 console.error(`Error processing file ${fileInfo.filePath}:`, err);
@@ -76,31 +68,26 @@ export const usePublicationsStore = defineStore('publications', () => {
         return results;
     }
 
-    // Process a single SIP package
-    const processSIP = async (zipData, sipId) => {
-        // Check cache first
-        if (publicationCache.value.has(sipId)) {
-            return publicationCache.value.get(sipId);
+    const processDIP = async (zipData, dipId) => {
+        if (publicationCache.value.has(dipId)) {
+            return publicationCache.value.get(dipId);
         }
 
         try {
             const zip = await JSZip.loadAsync(zipData);
-            const manifestContent = await zip.file('manifesto-SIP.json').async('string');
+            const manifestContent = await zip.file('manifesto-DIP.json').async('string');
             const manifest = JSON.parse(manifestContent);
 
-            // Verify files
             const verificationResults = await verifyFiles(zip, manifest);
             if (verificationResults.errors.length > 0) {
                 throw new Error('File verification failed: ' + 
                     verificationResults.errors.map(e => e.error).join(', '));
             }
 
-            // Extract files
-            const files = await extractFilesFromSIP(zip, manifest);
+            const files = await extractFilesFromDIP(zip, manifest);
 
-            // Create publication object
             const publication = {
-                id: sipId,
+                id: dipId,
                 user: manifest.submitter,
                 occurrenceDate: manifest.occurenceDate,
                 title: manifest.title,
@@ -110,21 +97,19 @@ export const usePublicationsStore = defineStore('publications', () => {
                 comments: manifest.comments || [],
                 files: files.filter(f => !f.error),
                 createdAt: manifest.created,
-                // Resource-specific fields
                 ...getResourceSpecificFields(manifest)
             };
 
             // Add to cache
-            publicationCache.value.set(sipId, publication);
+            publicationCache.value.set(dipId, publication);
             
             return publication;
         } catch (err) {
-            console.error('Error processing SIP:', err);
+            console.error('Error processing DIP:', err);
             throw err;
         }
     };
 
-    // Helper to extract resource-specific fields
     function getResourceSpecificFields(manifest) {
         const fields = {};
         const resourceFields = [
@@ -145,7 +130,6 @@ export const usePublicationsStore = defineStore('publications', () => {
         return fields;
     }
 
-    // Verify files in SIP package
     async function verifyFiles(zip, manifest) {
         const results = { valid: [], errors: [] };
         
@@ -227,13 +211,11 @@ export const usePublicationsStore = defineStore('publications', () => {
         return results;
     }
 
-    // Load publications for a specific view
     const loadPublications = async (type, username = null) => {
         try {
             loading.value = true;
             error.value = null;
 
-            // Clean up previous publications
             cleanupActivePublications();
 
             let response;
@@ -256,20 +238,17 @@ export const usePublicationsStore = defineStore('publications', () => {
                     throw new Error('Invalid publication type requested');
             }
 
-            // Process the master ZIP
             const masterZip = await JSZip.loadAsync(response.data);
-            const sipFiles = Object.keys(masterZip.files).filter(f => f.endsWith('.zip'));
+            const dipFiles = Object.keys(masterZip.files).filter(f => f.endsWith('.zip'));
 
-            // Process each SIP in parallel
-            const processingPromises = sipFiles.map(async filename => {
-                const sipId = filename.replace('.zip', '').replace('sip-', '');
-                const sipData = await masterZip.file(filename).async('arraybuffer');
-                return processSIP(sipData, sipId);
+            const processingPromises = dipFiles.map(async filename => {
+                const dipId = filename.replace('.zip', '').replace('dip-', '');
+                const dipData = await masterZip.file(filename).async('arraybuffer');
+                return processDIP(dipData, dipId);
             });
 
             const publications = await Promise.all(processingPromises);
             
-            // Store in active publications
             publications.forEach(pub => {
                 activePublications.value[pub.id] = pub;
             });
@@ -283,7 +262,6 @@ export const usePublicationsStore = defineStore('publications', () => {
         }
     };
 
-    // Clean up active publications (call when leaving page)
     const cleanupActivePublications = () => {
         Object.values(activePublications.value).forEach(pub => {
             pub.files.forEach(file => {
@@ -293,12 +271,10 @@ export const usePublicationsStore = defineStore('publications', () => {
         activePublications.value = {};
     };
 
-    // Get active publication by ID
     const getPublication = (id) => {
         return activePublications.value[id] || publicationCache.value.get(id);
     };
 
-    // Add comment to publication
     const addComment = (publicationId, username, comment) => {
         const publication = activePublications.value[publicationId] || publicationCache.value.get(publicationId);
         if (publication) {
