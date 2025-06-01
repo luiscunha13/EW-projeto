@@ -24,3 +24,11 @@ module.exports.create = (metadata) => {
     const newMetadata = new Metadata(metadata);
     return newMetadata.save();
 }
+
+module.exports.updateMetadata = (pubId, updateData) => {
+    return Metadata.findByIdAndUpdate(
+        pubId,
+        updateData,
+        { new: true } 
+    ).exec();
+}

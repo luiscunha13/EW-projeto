@@ -287,6 +287,31 @@ export const usePublicationsStore = defineStore('publications', () => {
         }
     };
 
+    const getPublicationById = async (id) => {
+        try {
+            const authStore = useAuthStore();
+            loading.value = true;
+            error.value = null;
+    
+            const response = await axios.get(`http://localhost:14000/api/publications/${id}`, {
+                responseType: 'arraybuffer',
+                headers: {
+                    Authorization: `Bearer ${authStore.token}`,
+                },
+            });
+    
+            // Process the DIP directly (no master zip in this case)
+            const publication = await processDIP(response.data);
+            
+            activePublications.value[publication.id] = publication;
+            return publication;
+        } catch (err) {
+            error.value = err.response?.data?.message || err.message;
+            throw err;
+        } finally {
+            loading.value = false;
+        }
+    };
     const cleanupActivePublications = () => {
         Object.values(activePublications.value).forEach(pub => {
             pub.files.forEach(file => {
@@ -333,6 +358,7 @@ export const usePublicationsStore = defineStore('publications', () => {
         loadPublications,
         cleanupActivePublications,
         getPublication,
+        getPublicationById,
         addComment
     };
 });

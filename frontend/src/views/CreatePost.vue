@@ -414,7 +414,7 @@ export default {
       this.isUploading = true;
 
       try {
-        if (!this.sipMetadata.title) throw new Error('SIP title is required');
+        if (!this.sipMetadata.title) throw new Error('Title is required');
         if (!this.sipMetadata.resourceType) throw new Error('Resource type is required');
         
         for (const fileItem of this.fileItems) {

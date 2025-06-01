@@ -89,7 +89,6 @@
                       @change="resetOptionalFields"
                       class="sip-select"
                       required
-                      disabled
                     >
                       <option value="">Select type</option>
                       <option value="sport">Sport</option>
@@ -305,8 +304,7 @@
   import { useAuthStore } from '../stores/auth';
   import { usePublicationsStore } from '../stores/pubs';
   import { useUsersStore } from '../stores/users';
-  import { useRouter } from 'vue-router';
-  
+
   export default {
     setup() {
       const router = useRouter();
@@ -411,7 +409,7 @@
             isPublic: post.visibility,
             submitter: post.user,
             creationDate: post.createdAt,
-            occurenceDate: post.occurenceDate || '',
+            occurenceDate: this.formatDateForInput(post.occurrenceDate),
             resourceType: post.resourceType,
             ...post.metadata // Spread any additional metadata fields
           };
@@ -424,6 +422,11 @@
           console.error('Error loading post:', error);
         }
       },
+      formatDateForInput(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return date.toISOString().split('T')[0];
+        },
       addFileItem() {
         this.fileItems.push({
           file: null,
@@ -571,12 +574,16 @@
           const formData = new FormData();
           formData.append('sip', zipBlob, 'submission.zip');
           formData.append('postId', this.postId);
-  
-          const response = await axios.put('http://localhost:14000/api/ingest', formData, {
-            headers: {
-              Authorization: `Bearer ${this.authStore.token}`,
-            },
-          });
+          const authStore = useAuthStore();
+          const response = await axios.put(
+                `http://localhost:14000/api/publications/${this.postId}`, 
+                formData, 
+                {
+                    headers: {
+                        Authorization: `Bearer ${authStore.token}`
+                    }
+                }
+            );
   
           if (!response.data.success) {
             throw new Error(response.error || 'Failed to update post');

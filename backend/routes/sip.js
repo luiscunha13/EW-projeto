@@ -487,6 +487,24 @@ router.get('/publications/self/:username', verifyTokenSimple, async (req, res) =
     }
 });
 
+router.get('/publications/:id', verifyTokenSimple, async (req, res) => {
+    try {
+
+        const metadataDoc = await Metadata.getMetadataByPubId(req.params.id);
+
+        if (!metadataDoc) {
+            return res.status(404).json({ error: 'Publication not found' });
+        }
+
+        const dipBuffer = await reconstructDIP(metadataDoc);
+        res.status(200).send(dipBuffer);
+
+    } catch (err) {
+        console.error('Error fetching user publications:', err);
+        res.status(500).json({ error: 'Failed to fetch user publications' });
+    }
+});
+
 router.post('/publications/:id/comments', verifyTokenSimple, async (req, res) => {
     try {
         const publicationId = req.params.id;
@@ -511,5 +529,139 @@ router.post('/publications/:id/comments', verifyTokenSimple, async (req, res) =>
         res.status(500).json({ error: 'Failed to add comment' });
     }
 });
+
+router.put('/publications/:id', verifyTokenSimple, upload.single('sip'), async (req, res) => {
+    let tempFilePath = req.file?.path;
+    
+    try {
+        if (!req.file) {
+            console.log('No file uploaded');
+            return res.status(400).json({ error: 'No SIP package uploaded' });
+        }
+
+        const zipData = fs.readFileSync(tempFilePath);
+        const zip = await JSZip.loadAsync(zipData);
+        const zipFiles = Object.keys(zip.files);
+
+        if (!zipFiles.includes('manifesto-SIP.json')) {
+            console.log('Manifest file not found in SIP');
+            return res.status(400).json({ error: 'Manifest file not found in SIP' });
+        }
+
+        const manifestContent = await zip.file('manifesto-SIP.json').async('string');
+        const manifest = JSON.parse(manifestContent);
+
+        // Verify the publication exists and belongs to the submitter
+        const existingPub = await Metadata.getMetadataByPubId(req.params.id);
+        if (!existingPub) {
+            return res.status(404).json({ error: 'Publication not found' });
+        }
+        if (existingPub.user !== manifest.submitter) {
+            return res.status(403).json({ error: 'You can only update your own publications' });
+        }
+
+        const userStoragePath = path.join(__dirname, '..', 'storage', 'temp', manifest.submitter);
+        fs.mkdirSync(userStoragePath, { recursive: true });
+
+        const verificationResults = await verifyFiles(zip, manifest, zipFiles);
+        
+        if (verificationResults.errors.length > 0) {
+            console.log('File verification failed', verificationResults.errors);
+            return res.status(400).json({
+                error: 'Some files failed verification',
+                details: verificationResults.errors
+            });
+        }
+
+        // Get the old file IDs before updating
+        const oldFileIds = existingPub.files || [];
+
+        // Process and store the new files
+        const storedFiles = await processAndStoreFiles(zip, manifest, userStoragePath, manifest.submitter);
+
+        // Update the metadata document
+        const fileIds = storedFiles
+            .filter(f => !f.error)
+            .map(f => f.fileId);
+
+        const updateDoc = {
+            lastModified: new Date(),
+            occurrenceDate: new Date(manifest.occurenceDate),
+            title: manifest.title,
+            description: manifest.description,
+            visibility: manifest.visibility ? 'public' : 'private',
+            files: fileIds,
+            resourceType: manifest.resourceType
+        };
+
+        // Add resource-specific fields
+        const resourceFields = [
+            'sport', 'activityTime', 'activityDistance',
+            'institution', 'course', 'schoolYear',
+            'familyMember', 'places',
+            'company', 'position',
+            'feeling',
+            'artist', 'genre', 'movie', 'festival'
+        ];
+        
+        resourceFields.forEach(field => {
+            if (manifest[field] !== undefined) {
+                updateDoc[field] = manifest[field];
+            }
+        });
+
+        const updatedMetadata = await Metadata.updateMetadata(
+            req.params.id,
+            updateDoc,
+            { new: true }
+        );
+
+        // Cleanup old files that are no longer referenced
+        const filesToRemove = oldFileIds.filter(id => !fileIds.includes(id.toString()));
+        if (filesToRemove.length > 0) {
+            console.log(`Cleaning up ${filesToRemove.length} old files`);
+            await Promise.all(filesToRemove.map(async (fileId) => {
+                try {
+                    const fileInfo = await FileInfo.getFileInfoById(fileId);
+                    if (fileInfo && fileInfo.file_path) {
+                        // Delete the file from filesystem
+                        if (fs.existsSync(fileInfo.file_path)) {
+                            fs.unlinkSync(fileInfo.file_path);
+                            console.log(`Deleted file: ${fileInfo.file_path}`);
+                        }
+                        // Delete the file info from database
+                        await FileInfo.deleteFileInfo(fileId);
+                        console.log(`Deleted file info for ID: ${fileId}`);
+                    }
+                } catch (err) {
+                    console.error(`Error cleaning up file ${fileId}:`, err);
+                }
+            }));
+        }
+
+        fs.unlinkSync(tempFilePath);
+
+        console.log('SIP package successfully updated');
+
+        res.status(200).json({
+            success: true,
+            pubId: updatedMetadata._id,
+            pubTitle: updatedMetadata.title,
+            filesRemoved: filesToRemove.length
+        });
+
+    } catch (error) {
+        if (tempFilePath && fs.existsSync(tempFilePath)) {
+            fs.unlinkSync(tempFilePath);
+        }
+        console.error('Error updating publication:', error);
+        res.status(500).json({ 
+            error: 'Internal server error',
+            details: error.message 
+        });
+    }
+});
+
+
 
 module.exports = router;
