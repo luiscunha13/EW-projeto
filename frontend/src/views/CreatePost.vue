@@ -413,7 +413,7 @@ export default {
           const file = fileItem.file;
           dataFolder.file(file.name, file);
           const fileHash = await this.calculateSHA256(file);
-
+          console.log(`File: ${file.name}, Type: ${file.type}`);
           const metadata = {
             creationDate: this.sipMetadata.creationDate,
             submissionDate: new Date().toISOString(),
@@ -450,7 +450,12 @@ export default {
         
         const formData = new FormData();
         formData.append('sip', zipBlob, 'submission.zip');
-        const response = await axios.post('http://localhost:14000/api/ingest', formData);
+        const authStore = useAuthStore();
+        const response = await axios.post('http://localhost:14000/api/ingest', formData, {
+                    headers: {
+                        Authorization: `Bearer ${authStore.token}`,
+                    },
+                });
 
         if (!response.data.success) {
           throw new Error(response.error || 'Failed to upload SIP');
