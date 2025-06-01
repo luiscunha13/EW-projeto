@@ -466,6 +466,13 @@ const exportPublications = async () => {
     a.download = `${profileUser.value.username}-posts.json`;
     a.click();
     URL.revokeObjectURL(url);
+
+    const log = {
+      action: `Exported publications from user ${profileUser.value.username}`,
+      user: authStore.user.username,
+      timestamp: (() => {const now = new Date(); now.setHours(now.getHours() + 1); return now;})()
+    }
+    await logsStore.addLog(log);
   }
 };
 
@@ -510,6 +517,13 @@ const exportSinglePost = async (publication) => {
     a.download = `${profileUser.value.username}-post-${publication.id}.json`;
     a.click();
     URL.revokeObjectURL(url);
+
+    const log = {
+      action: `Exported publication (id: ${publication.id} - title: ${publication.title})`,
+      user: authStore.user.username,
+      timestamp: (() => {const now = new Date(); now.setHours(now.getHours() + 1); return now;})()
+    }
+    await logsStore.addLog(log);
   }
 };
 
