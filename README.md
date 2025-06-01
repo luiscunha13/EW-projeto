@@ -47,6 +47,13 @@ Quem envia, constrói o manifesto com as informações necessárias e cria o zip
 
 O recetor do zip, ao descompactar, consulta o manifesto e verifica se todos os ficheiros estão presentes e a sua checksum para garantir que não foram alterados, garantindo assim a integridade da transferência.
 
+Para executar este serviço em `/backend`:
+
+- `npm install`
+- `npm start`
+
+O serviço será executado em `http://localhost:14000`.
+
 ### Auth
 
 Também existe a noção de administrador que é responsável por, para além de todas as funcionalidade já disponíveis, também gerir os utilizador, nomeadamente apagar e banir um utilizador do feed principal.
@@ -55,9 +62,16 @@ Este serviço de autenticação é responsável por processar os logins e regist
 
 Também é responsável por, verificar esse token para garantir a autenticação de quem fez o pedido, e também a autorização de admin, se for o caso.
 
-Com recurso ao [passport](https://www.passportjs.org/), foi possível incluír também a autenticação com o Google.
+Com recurso ao [passport](https://www.passportjs.org/), foi possível incluír também a autenticação com o Google, para a qual foi necessário registar a aplicação na Google Cloud.
 
 Este serviço também responde a pedidos de dados relativos a utilizadores, como a lista dos utilizadores da aplicação, dados sobre um específico ou alteração de um já existente.
+
+Para executar este serviço em `/auth`:
+
+- `npm install`
+- `npm start`
+
+O serviço será executado em `http://localhost:13000`.
 
 ### Base de Dados
 
