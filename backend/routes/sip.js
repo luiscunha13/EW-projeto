@@ -190,36 +190,36 @@ async function storeMetadata(manifest, storedFiles, submitter) {
 
         // Add resource-specific fields based on the resourceType
         switch (manifest.resourceType) {
-            case 'desporto':
+            case 'sport':
                 if (manifest.sport) metadataDoc.sport = manifest.sport;
                 if (manifest.activityTime) metadataDoc.activityTime = manifest.activityTime;
                 if (manifest.activityDistance) metadataDoc.activityDistance = manifest.activityDistance;
                 break;
                 
-            case 'académico':
+            case 'academic':
                 if (manifest.institution) metadataDoc.institution = manifest.institution;
                 if (manifest.course) metadataDoc.course = manifest.course;
                 if (manifest.schoolYear) metadataDoc.schoolYear = manifest.schoolYear;
                 break;
                 
-            case 'familiar':
+            case 'family':
                 metadataDoc.familyMember = manifest.familyMember || [];
                 break;
                 
-            case 'viagem':
+            case 'trip':
                 metadataDoc.places = manifest.places || [];
                 break;
                 
-            case 'trabalho':
+            case 'work':
                 if (manifest.company) metadataDoc.company = manifest.company;
                 if (manifest.position) metadataDoc.position = manifest.position;
                 break;
                 
-            case 'pessoal':
+            case 'personal':
                 if (manifest.feeling) metadataDoc.feeling = manifest.feeling;
                 break;
                 
-            case 'entretenimento':
+            case 'fun':
                 if (manifest.artist) metadataDoc.artist = manifest.artist;
                 if (manifest.genre) metadataDoc.genre = manifest.genre;
                 if (manifest.movie) metadataDoc.movie = manifest.movie;

@@ -4,7 +4,7 @@
       <img src="@/assets/logo.png" alt="Logo" class="logo" />
       <form @submit.prevent="handleLogin">
         <div class="input-group">
-          <input v-model="username" type="username" placeholder="UserName" required>
+          <input v-model="username" type="username" placeholder="Username" required>
         </div>
         <div class="input-group">
           <input v-model="password" type="password" placeholder="Password" required>

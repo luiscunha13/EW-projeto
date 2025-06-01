@@ -24,32 +24,32 @@ const MetadataSchema = new mongoose.Schema({
   resourceType: { 
     type: String,
     required: true,
-    enum: ['desporto', 'académico', 'familiar', 'viagem', 'trabalho', 'pessoal', 'entretenimento', 'outro']
+    enum: ['sport', 'academic', 'family', 'trip', 'work', 'personal', 'fun', 'other']
   },
-  //Campos opcionais desporto
+  //Campos opcionais sport
   sport: String,
   activityTime: Number,
   activityDistance: Number,
 
-  //Campos opcionais académico
+  //Campos opcionais academic
   institution: String,
   course: String,
   schoolYear: Number,
 
-  //Campos opcionais familiar
+  //Campos opcionais family
   familyMember: [String],
 
-  //Campos opcionais viagem
+  //Campos opcionais trip
   places: [String],
 
-  //Campos opcionais trabalho
+  //Campos opcionais work
   company: String,
   position: String,
 
-  //Campos opcionais pessoal
+  //Campos opcionais personal
   feeling: String,
 
-  //Campos opcionais entretenimento
+  //Campos opcionais fun
   artist: String,
   genre: String,
   movie: String,

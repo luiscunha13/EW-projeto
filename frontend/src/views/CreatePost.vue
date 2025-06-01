@@ -88,22 +88,22 @@
                     required
                   >
                     <option value="">Select type</option>
-                    <option value="desporto">Desporto</option>
-                    <option value="académico">Académico</option>
-                    <option value="familiar">Familiar</option>
-                    <option value="viagem">Viagem</option>
-                    <option value="trabalho">Trabalho</option>
-                    <option value="pessoal">Pessoal</option>
-                    <option value="entretenimento">Entretenimento</option>
-                    <option value="outro">Outro</option>
+                    <option value="sport">Sport</option>
+                    <option value="academic">Academic</option>
+                    <option value="family">Family</option>
+                    <option value="trip">Trip</option>
+                    <option value="work">Work</option>
+                    <option value="personal">Personal</option>
+                    <option value="fun">Fun</option>
+                    <option value="other">Other</option>
                   </select>
                 </div>
               </div>
 
               <!-- Dynamic fields based on resource type -->
-              <div v-if="sipMetadata.resourceType !='outro' && sipMetadata.resourceType !=''" class="optional-fields">
+              <div v-if="sipMetadata.resourceType !='other' && sipMetadata.resourceType !=''" class="optional-fields">
                 <!-- Desporto Fields -->
-                <div v-if="sipMetadata.resourceType === 'desporto'" class="resource-fields">
+                <div v-if="sipMetadata.resourceType === 'sport'" class="resource-fields">
                   <h4>Sport Details</h4>
                   <div class="form-row">
                     <div class="form-group">
@@ -121,7 +121,7 @@
                     </div>
                   </div>
                 </div>
-                <div v-if="sipMetadata.resourceType === 'académico'" class="resource-fields">
+                <div v-if="sipMetadata.resourceType === 'academic'" class="resource-fields">
                   <h4>Academic Details</h4>
                   <div class="form-row">
                     <div class="form-group">
@@ -139,7 +139,7 @@
                     </div>
                   </div>
                 </div>
-                <div v-if="sipMetadata.resourceType === 'familiar'" class="resource-fields">
+                <div v-if="sipMetadata.resourceType === 'family'" class="resource-fields">
                   <h4>Family Details</h4>
                   <div class="form-row">
                     <div class="form-group">
@@ -147,7 +147,7 @@
                     </div>
                   </div>
                 </div>
-                <div v-if="sipMetadata.resourceType === 'viagem'" class="resource-fields">
+                <div v-if="sipMetadata.resourceType === 'trip'" class="resource-fields">
                   <h4>Trip Details</h4>
                   <div class="form-row">
                     <div class="form-group">
@@ -155,7 +155,7 @@
                     </div>
                   </div>
                 </div>
-                <div v-if="sipMetadata.resourceType === 'trabalho'" class="resource-fields">
+                <div v-if="sipMetadata.resourceType === 'work'" class="resource-fields">
                   <h4>Work Details</h4>
                   <div class="form-row">
                     <div class="form-group">
@@ -168,7 +168,7 @@
                     </div>
                   </div>
                 </div>
-                <div v-if="sipMetadata.resourceType === 'pessoal'" class="resource-fields">
+                <div v-if="sipMetadata.resourceType === 'personal'" class="resource-fields">
                   <h4>Personal Details</h4>
                   <div class="form-row">
                     <div class="form-group">
@@ -176,7 +176,7 @@
                     </div>
                   </div>
                 </div>
-                <div v-if="sipMetadata.resourceType === 'entretenimento'" class="resource-fields">
+                <div v-if="sipMetadata.resourceType === 'fun'" class="resource-fields">
                   <h4>Event Details</h4>
                   <div class="form-row">
                     <div class="form-group">
@@ -375,7 +375,7 @@ export default {
 
       try {
         if (!this.sipMetadata.title) throw new Error('SIP title is required');
-        if (!this.sipMetadata.resourceType) throw new Error('Resource type is required'); 
+        if (!this.sipMetadata.resourceType) throw new Error('Resource type is required');
         
         for (const fileItem of this.fileItems) {
           if (!fileItem.file) throw new Error('All files must be selected');
@@ -468,13 +468,13 @@ export default {
     },
     getOptionalFieldsForResourceType(resourceType) {
       const fieldsMap = {
-        desporto: ['sport', 'activityTime', 'activityDistance'],
-        académico: ['institution', 'course', 'schoolYear'],
-        familiar: ['familyMember'],
-        viagem: ['places'],
-        trabalho: ['company', 'position'],
-        pessoal: ['feeling'],
-        entretenimento: ['artist', 'genre', 'movie', 'festival']
+        sport: ['sport', 'activityTime', 'activityDistance'],
+        academic: ['institution', 'course', 'schoolYear'],
+        family: ['familyMember'],
+        trip: ['places'],
+        work: ['company', 'position'],
+        personal: ['feeling'],
+        fun: ['artist', 'genre', 'movie', 'festival']
       };
       return fieldsMap[resourceType] || [];
     },
