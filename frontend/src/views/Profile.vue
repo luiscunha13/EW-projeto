@@ -33,8 +33,8 @@
       </div>
 
       <!-- Main Profile Content -->
-    <main class="main-content">
-        <!-- Profile Header - Updated for horizontal layout -->
+      <main class="main-content">
+        <!-- Profile Header -->
         <div class="profile-header">
           <div class="profile-info">
             <div class="profile-avatar">
@@ -50,62 +50,125 @@
               <p class="username">@{{ profileUser.username }}</p>
               <div class="profile-stats">
                 <div class="stat">
-                  <span class="count">{{ filteredPosts.length }}</span>
+                  <span class="count">{{ publications.length }}</span>
                   <span>Posts</span>
                 </div>
-                <!-- Add more stats here if needed -->
               </div>
             </div>
           </div>
         </div>
 
-        <!-- User Posts - Updated with links and individual export buttons -->
-        <div class="posts-container">
-          <div 
-            v-for="post in filteredPosts" 
-            :key="post.id" 
-            class="post"
-            @click="navigateToPost(post.id)"
-          >
+        <div v-if="loading" class="loading">Loading publications...</div>
+        <div v-else-if="error" class="error">{{ error }}</div>
+        <div v-else class="posts-container">
+          <div v-for="publication in publications" :key="publication.id" class="post">
             <div class="post-avatar">
-              <div class="avatar">{{ getInitial(post.author.name) }}</div>
+              <div class="avatar">{{ getInitial(publication.user) }}</div>
             </div>
             <div class="post-content">
               <div class="post-header">
-                <span class="post-author">{{ post.author.name }}</span>
-                <span class="post-username">@{{ post.author.username }}</span>
-                <span class="post-time">· {{ formatTime(post.timestamp) }}</span>
+                <span class="post-author">{{ publication.user }}</span>
+                <span class="post-time">· {{ formatTime(publication.createdAt) }}</span>
                 <button 
                   class="export-post-button"
-                  @click.stop="exportSinglePost(post)"
+                  @click.stop="exportSinglePost(publication)"
                 >
                   Export
                 </button>
-              </div>
-              <div class="post-text">
-                {{ post.content }}
-              </div>
-              <div class="post-actions">
-                <button class="action-button">
-                  <span class="icon">💬</span>
-                  <span>{{ post.comments }}</span>
-                </button>
                 <button 
-                  class="action-button edit-post-button" 
-                  v-if="canEditPost(post)"
-                  @click.stop="navigateToEditPost(post.id)"
+                  class="edit-post-button" 
+                  v-if="canEditPost(publication)"
+                  @click.stop="navigateToEditPost(publication.id)"
                 >
-                  <span class="icon">✏️</span>
-                  <span>Edit</span>
+                  Edit
                 </button>
+              </div>
+              <h3 class="post-title">{{ publication.title }}</h3>
+              <div class="post-description">
+                {{ publication.description }}
+              </div>
+              <div class="post-resource-type">
+                <span class="resource-tag">{{ publication.resourceType }}</span>
+                <span v-if="isCurrentUser" class="visibility-tag" :class="{'public': publication.visibility, 'private': !publication.visibility}">
+                  {{ publication.visibility ? 'Public' : 'Private' }}
+                </span>
+              </div>
+              
+              <!-- Display files if any -->
+              <div v-if="publication.files.length > 0" class="publication-files">
+                <div v-for="file in publication.files" :key="file.filename" class="file-preview">
+                  <!-- Image display -->
+                  <img v-if="isImageFile(file)" 
+                    :src="getFileUrl(file)" 
+                    :alt="file.filename" 
+                    class="file-media"
+                    @click="openMediaViewer(getFileUrl(file), $event)">
+                  
+                  <!-- Video display -->
+                  <video v-else-if="isVideoFile(file)" 
+                        controls 
+                        class="file-media"
+                        @click.stop
+                        :src="file.fileUrl">
+                    Your browser does not support the video tag.
+                  </video>
+
+                  <!-- Audio display -->
+                  <div v-else-if="isAudioFile(file)" class="audio-player">
+                    <audio controls class="audio-element" @click.stop :src="file.fileUrl">
+                      Your browser does not support the audio element.
+                    </audio>
+                    <span class="audio-filename">{{ file.filename }}</span>
+                  </div>
+                  
+                  <!-- Other file types -->
+                  <a v-else :href="getFileUrl(file)" 
+                    target="_blank" 
+                    class="file-link"
+                    :download="file.filename">
+                    <span class="file-icon">📄</span>
+                    {{ file.filename }}
+                  </a>
+                </div>
+              </div>
+              
+              <div class="post-actions">
+                <button class="action-button" @click.stop="toggleComments(publication.id)">
+                  <span class="icon">💬</span>
+                  <span>{{ publication.comments.length }}</span>
+                </button>
+              </div>
+
+              <div v-if="expandedComments === publication.id" class="comments-section">
+                <div class="comment-list">
+                  <div v-for="comment in publication.comments" :key="comment.date" class="comment">
+                    <div class="comment-avatar">{{ getInitial(comment.username) }}</div>
+                    <div class="comment-content">
+                      <div class="comment-header">
+                        <span class="comment-author">@{{ comment.username }}</span>
+                        <span class="comment-time">· {{ formatTime(comment.date) }}</span>
+                      </div>
+                      <div class="comment-text">{{ comment.comment }}</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="comment-input">
+                  <input 
+                    v-model="newComments[publication.id]" 
+                    @keyup.enter="addComment(publication.id)" 
+                    placeholder="Write a comment..."
+                  />
+                  <button @click="addComment(publication.id)">Post</button>
+                </div>
               </div>
             </div>
           </div>
-          <div v-if="filteredPosts.length === 0" class="empty-state">
-            <p>No posts to display</p>
-          </div>
+        </div>
+        <div v-if="publications.length === 0 && !loading" class="empty-state">
+          <p>No posts to display</p>
         </div>
       </main>
+
       <!-- Right Sidebar - User List -->
       <div class="sidebar right-sidebar">
         <div class="sidebar-header">
@@ -133,21 +196,30 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
-import { useLogsStore } from '@/stores/logs';
 import { useUsersStore } from '../stores/users';
+import { useLogsStore } from '@/stores/logs';
+import { usePublicationsStore } from '../stores/pubs';
 
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
-const logsStore = useLogsStore();
 const usersStore = useUsersStore();
+const logsStore = useLogsStore();
+const publicationsStore = usePublicationsStore();
 
 const currentUser = computed(() => authStore.user);
 const profileUser = ref({});
-const allPosts = ref([]);
+const loading = ref(false);
+const error = ref(null);
+const expandedComments = ref(null);
+const newComments = ref({});
+
+const publications = computed(() => {
+  return Object.values(publicationsStore.activePublications);
+});
 
 // Computed properties
 const userInitial = computed(() => {
@@ -166,30 +238,130 @@ const canViewMetrics = computed(() => {
   return currentUser.value.role === 'admin' || isCurrentUser.value;
 });
 
-const filteredPosts = computed(() => {
-  return allPosts.value.filter(post => 
-    post.author.username === profileUser.value.username
-  );
-});
-
-const canEditPost = (post) => {
+const canEditPost = (publication) => {
   return currentUser.value.role === 'admin' || 
-         post.author.username === currentUser.value.username;
+         publication.user === currentUser.value.username;
 };
 
 // Helper functions
 const formatTime = (timestamp) => {
+  const date = new Date(timestamp);
   const now = new Date();
-  const diff = Math.floor((now - timestamp) / 1000);
+  const diff = Math.floor((now - date) / 1000); // difference in seconds
   
-  if (diff < 60) return `${diff}s`;
-  else if (diff < 3600) return `${Math.floor(diff / 60)}m`;
-  else if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
-  else return `${Math.floor(diff / 86400)}d`;
+  if (diff < 60) {
+    return `${diff}s`;
+  } else if (diff < 3600) {
+    return `${Math.floor(diff / 60)}m`;
+  } else if (diff < 86400) {
+    return `${Math.floor(diff / 3600)}h`;
+  } else {
+    return `${Math.floor(diff / 86400)}d`;
+  }
 };
 
 const getInitial = (name) => {
-  return name?.charAt(0) || '';
+  return name?.charAt(0) || '?';
+};
+
+const isImageFile = (file) => {
+  return file.mimeType?.startsWith('image/') || 
+         /\.(png|jpg|jpeg|gif|webp)$/i.test(file.filename);
+};
+
+const isVideoFile = (file) => {
+  return file.mimeType?.startsWith('video/') || 
+         /\.(mp4|webm|ogg|mov|avi)$/i.test(file.filename);
+};
+
+const isAudioFile = (file) => {
+  return file.mimeType?.startsWith('audio/') || 
+         /\.(mp3|wav|ogg|m4a|flac)$/i.test(file.filename);
+};
+
+const getFileUrl = (file) => {
+  if (file.fileUrl && file.fileUrl.startsWith('blob:')) {
+    return file.fileUrl;
+  }
+  
+  if (file.fileData) {
+    const blob = new Blob([file.fileData], { type: file.mimeType });
+    return URL.createObjectURL(blob);
+  }
+  
+  return file.fileUrl;
+};
+
+const openMediaViewer = (mediaUrl, event) => {
+  event.preventDefault();
+  event.stopPropagation();
+
+  const modal = document.createElement('div');
+  modal.style.position = 'fixed';
+  modal.style.top = '0';
+  modal.style.left = '0';
+  modal.style.width = '100%';
+  modal.style.height = '100%';
+  modal.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+  modal.style.display = 'flex';
+  modal.style.justifyContent = 'center';
+  modal.style.alignItems = 'center';
+  modal.style.zIndex = '1000';
+  modal.style.cursor = 'zoom-out';
+  
+  const img = document.createElement('img');
+  img.src = mediaUrl;
+  img.style.maxWidth = '90%';
+  img.style.maxHeight = '90%';
+  img.style.objectFit = 'contain';
+  img.style.transition = 'transform 0.1s ease';
+  
+  let scale = 1;
+  
+  const handleWheel = (e) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    scale = Math.min(Math.max(0.5, scale + delta), 5);
+    img.style.transform = `scale(${scale})`;
+  };
+  
+  const handleDblClick = () => {
+    scale = 1;
+    img.style.transform = `scale(${scale})`;
+  };
+  
+  modal.addEventListener('wheel', handleWheel, { passive: false });
+  img.addEventListener('dblclick', handleDblClick);
+  
+  modal.onclick = (e) => {
+    if (e.target === modal) {
+      modal.removeEventListener('wheel', handleWheel);
+      img.removeEventListener('dblclick', handleDblClick);
+      document.body.removeChild(modal);
+    }
+  };
+  
+  modal.appendChild(img);
+  document.body.appendChild(modal);
+};
+
+const toggleComments = (publicationId) => {
+  expandedComments.value = expandedComments.value === publicationId ? null : publicationId;
+};
+
+const addComment = async (publicationId) => {
+  if (!newComments.value[publicationId]?.trim()) return;
+  
+  try {
+    await publicationsStore.addComment(
+      publicationId,
+      authStore.user.username,
+      newComments.value[publicationId]
+    );
+    newComments.value[publicationId] = '';
+  } catch (err) {
+    console.error('Error adding comment:', err);
+  }
 };
 
 // Navigation functions
@@ -213,10 +385,6 @@ const navigateToMetrics = () => {
   router.push('/metrics');
 };
 
-const navigateToPost = (postId) => {
-  router.push(`/post/${postId}`);
-};
-
 const handleLogout = () => {
   authStore.logout();
   router.push('/login');
@@ -225,7 +393,7 @@ const handleLogout = () => {
 const exportPublications = () => {
   const data = {
     user: profileUser.value,
-    posts: filteredPosts.value
+    posts: publications.value
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -236,58 +404,45 @@ const exportPublications = () => {
   URL.revokeObjectURL(url);
 };
 
-const exportSinglePost = (post) => {
+const exportSinglePost = (publication) => {
   const data = {
-    post: post,
+    post: publication,
     user: profileUser.value
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${profileUser.value.username}-post-${post.id}.json`;
+  a.download = `${profileUser.value.username}-post-${publication.id}.json`;
   a.click();
   URL.revokeObjectURL(url);
 };
 
 // Load profile data
-const loadProfileData = (username) => {
-  const user = usersStore.users_list.find(u => u.username === username);
-  profileUser.value = user || {
-    name: username,
-    username: username
-  };
-  loadPosts(username);
-};
-
-// Simulate loading posts
-const loadPosts = (username) => {
-  allPosts.value = [
-    {
-      id: 1,
-      content: 'Just launched my new website! Check it out and let me know what you think.',
-      author: {
-        name: profileUser.value.name,
-        username: username
-      },
-      timestamp: new Date(Date.now() - 25 * 60000),
-      likes: 24,
-      comments: 5,
-      reposts: 2
-    },
-    {
-      id: 2,
-      content: 'Working on a new project. Excited to share more details soon!',
-      author: {
-        name: profileUser.value.name,
-        username: username
-      },
-      timestamp: new Date(Date.now() - 3 * 3600000),
-      likes: 42,
-      comments: 8,
-      reposts: 5
+const loadProfileData = async (username) => {
+  try {
+    loading.value = true;
+    error.value = null;
+    
+    // Find user in store
+    const user = usersStore.users_list.find(u => u.username === username);
+    profileUser.value = user || {
+      name: username,
+      username: username
+    };
+    
+    // Load appropriate publications
+    if (isCurrentUser.value) {
+      await publicationsStore.loadPublications('self', username);
+    } else {
+      await publicationsStore.loadPublications('user', username);
     }
-  ].filter(post => post.author.username === username);
+  } catch (err) {
+    error.value = err.message;
+    console.error('Error loading profile data:', err);
+  } finally {
+    loading.value = false;
+  }
 };
 
 onMounted(async () => {
@@ -302,14 +457,16 @@ onMounted(async () => {
   await logsStore.addLog(log);
 });
 
-watch(
-  () => route.params.username,
-  (newUsername) => {
-    if (newUsername) {
-      loadProfileData(newUsername);
-    }
-  }
-);
+
+onUnmounted(() => {
+  publications.value.forEach(pub => {
+    pub.files.forEach(file => {
+      if (file.fileUrl && file.fileUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(file.fileUrl);
+      }
+    });
+  });
+});
 </script>
 
 <style scoped>
@@ -442,6 +599,120 @@ watch(
   font-size: 20px;
 }
 
+.profile-header {
+  padding: 20px;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.profile-info {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.profile-avatar {
+  flex-shrink: 0;
+}
+
+.profile-details {
+  flex: 1;
+}
+
+.profile-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.profile-details h1 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.username {
+  color: #666;
+  margin: 0 0 12px 0;
+}
+
+.profile-stats {
+  display: flex;
+  gap: 20px;
+}
+
+.stat {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.count {
+  font-weight: 600;
+}
+
+.export-button {
+  padding: 8px 16px;
+  border-radius: 20px;
+  background-color: #111;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.export-button:hover {
+  background-color: #333;
+}
+
+.export-post-button, .edit-post-button {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  margin-left: 8px;
+  border: none;
+}
+
+.export-post-button {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.export-post-button:hover {
+  background-color: #ddd;
+}
+
+.edit-post-button {
+  background-color: #111;
+  color: white;
+}
+
+.edit-post-button:hover {
+  background-color: #333;
+}
+
+.empty-state {
+  padding: 40px;
+  text-align: center;
+  color: #666;
+}
+
+.avatar.large {
+  width: 64px;
+  height: 64px;
+  font-size: 24px;
+}
+
+.post-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+
 /* Main Content Styles */
 .main-content {
   border-left: 1px solid #eaeaea;
@@ -511,6 +782,102 @@ watch(
   gap: 16px;
 }
 
+.post-resource-type {
+  margin-bottom: 12px;
+}
+
+.resource-tag {
+  display: inline-block;
+  padding: 4px 8px;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #666;
+}
+
+.publication-files {
+  margin: 15px 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 15px;
+}
+
+.modal-image {
+  max-width: 90%;
+  max-height: 90%;
+  object-fit: contain;
+}
+
+.file-media {
+  max-width: 100%;
+  max-height: 400px;
+  border-radius: 8px;
+  object-fit: contain;
+  cursor: pointer;
+  background-color: #f5f5f5;
+  display: block; /* Ensure proper display */
+}
+
+.file-preview img {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 400px;
+}
+
+.file-media:hover {
+  opacity: 0.9;
+}
+
+.audio-player {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+}
+
+.audio-element {
+  width: 100%;
+}
+
+.audio-filename {
+  font-size: 14px;
+  color: #666;
+  word-break: break-all;
+}
+
+.file-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  color: #333;
+  text-decoration: none;
+}
+
+.file-link:hover {
+  background-color: #e0e0e0;
+}
+
+.file-icon {
+  font-size: 18px;
+}
+
+/* For single file display */
+.publication-files.single-file {
+  grid-template-columns: 1fr;
+}
+
+/* For multiple files */
+.publication-files.multiple-files {
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+
+
 .action-button {
   background: none;
   border: none;
@@ -535,6 +902,90 @@ watch(
 .liked {
   color: #e0245e;
 }
+
+.comments-section {
+  margin-top: 15px;
+  border-top: 1px solid #eaeaea;
+  padding-top: 10px;
+}
+
+.comment-list {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 10px;
+}
+
+.comment {
+  display: flex;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.comment-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #111;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+  margin-right: 10px;
+}
+
+.comment-content {
+  flex: 1;
+}
+
+.comment-header {
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.comment-author {
+  font-weight: 600;
+  color: #333;
+}
+
+.comment-time {
+  color: #666;
+  font-size: 12px;
+}
+
+.comment-text {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.comment-input {
+  display: flex;
+  margin-top: 10px;
+}
+
+.comment-input input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  outline: none;
+}
+
+.comment-input button {
+  margin-left: 8px;
+  padding: 8px 16px;
+  background-color: #111;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+}
+
+.comment-input button:hover {
+  background-color: #1991db;
+}
+
 
 /* Avatar Styles */
 .avatar {
@@ -767,6 +1218,24 @@ watch(
 
 .export-button:hover {
   background-color: #333;
+}
+
+.visibility-tag {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+  margin-left: 8px;
+}
+
+.visibility-tag.public {
+  background-color: #e6f7ee;
+  color: #0a8150;
+}
+
+.visibility-tag.private {
+  background-color: #fef0f0;
+  color: #de3618;
 }
 
 /* Avatar size adjustments */

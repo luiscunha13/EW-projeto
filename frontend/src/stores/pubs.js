@@ -108,7 +108,7 @@ export const usePublicationsStore = defineStore('publications', () => {
                 occurrenceDate: manifest.occurenceDate,
                 title: manifest.title,
                 description: manifest.description,
-                visibility: manifest.visibility === 'public',
+                visibility: manifest.visibility,
                 resourceType: manifest.resourceType,
                 comments: manifest.comments || [],
                 files: files.filter(f => !f.error),
