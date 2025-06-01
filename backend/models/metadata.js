@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const CommentSchema = new mongoose.Schema({
   username: { type: String, required: true },
   comment: { type: String, required: true }
-}, { _id: false });
+}, { _id: false }, { versionKey: false });
 
 const MetadataSchema = new mongoose.Schema({
   user: {type: String, required: true},
@@ -53,6 +53,6 @@ const MetadataSchema = new mongoose.Schema({
   genre: String,
   movie: String,
   festival: String,
-});
+}, { versionKey: false });
 
 module.exports = mongoose.model('metadata', MetadataSchema);

@@ -3,6 +3,7 @@ const router = express.Router();
 const Logs = require('../controllers/logs');
 const axios = require('axios');
 const cors = require('cors');
+const verifyToken = require('../utils/auth').verifyToken;
 
 router.use(cors({
   origin: 'http://localhost:5173',
@@ -10,31 +11,6 @@ router.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
-
-
-// Auxiliar para verificar o token JWT, pois nem todos tem acesso aos logs
-const verifyToken = async (req, res, next) => {
-    const token = req.query.token || req.body.token || req.get('Authorization');
-    if (!token) {
-        return res.status(401).jsonp({ error: 'No token provided' });
-    }
-    try {
-        const response = await axios.get('http://localhost:13000/verify-admin',  {
-            headers: {
-                Authorization: token,
-            },
-        });
-        
-        if (response.data && response.data.valid && response.data.isAdmin) {
-            next();
-        } else {
-            res.status(401).jsonp({ error: 'Invalid token' });
-        }
-    } catch (err) {
-        console.error('Token verification failed:', err.message);
-        res.status(401).jsonp(err);
-    }
-}
 
 router.get('/', verifyToken, (req, res) => {
     Logs.getLogs()

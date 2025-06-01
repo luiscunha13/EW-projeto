@@ -6,8 +6,9 @@ const fs = require('fs');
 const cors = require('cors');
 const path = require('path');
 const crypto = require('crypto');
-const Metadata = require('../models/metadata');
-const FileInfo = require('../models/fileInfo');
+const verifyTokenSimple = require('../utils/auth').verifyTokenSimple; //sem verificar admin
+const Metadata = require('../controllers/metadata');
+const FileInfo = require('../controllers/fileInfo');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -21,70 +22,6 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 router.use(cors());
-
-router.post('/ingest', upload.single('sip'), async (req, res) => {
-    let tempFilePath = req.file?.path;
-    
-    try {
-        if (!req.file) {
-            console.log('No file uploaded')
-            return res.status(400).json({ error: 'No SIP package uploaded' });
-        }
-
-        const zipData = fs.readFileSync(tempFilePath);
-        const zip = await JSZip.loadAsync(zipData);
-        const zipFiles = Object.keys(zip.files);
-
-        if (!zipFiles.includes('manifesto-SIP.json')) {
-            console.log('Manifest file not found in SIP')
-            return res.status(400).json({ error: 'Manifest file not found in SIP' });
-        }
-
-        const manifestContent = await zip.file('manifesto-SIP.json').async('string');
-        const manifest = JSON.parse(manifestContent);
-
-        const submitter = manifest.submitter;
-        if (!submitter) {
-            console.log('Submitter information missing in manifest')
-            return res.status(400).json({ error: 'Submitter information missing in manifest' });
-        }
-
-        const userStoragePath = path.join(__dirname, '..', 'storage', submitter);
-        fs.mkdirSync(userStoragePath, { recursive: true });
-
-        const verificationResults = await verifyFiles(zip, manifest, zipFiles);
-        
-        if (verificationResults.errors.length > 0) {
-            console.log('File verification failed', verificationResults.errors);
-            return res.status(400).json({
-                error: 'Some files failed verification',
-                details: verificationResults.errors
-            });
-        }
-
-        const storedFiles = await processAndStoreFiles(zip, manifest, userStoragePath, submitter);
-        
-        const metadataDoc = await storeMetadata(manifest, storedFiles, submitter);
-
-        fs.unlinkSync(tempFilePath);
-
-        console.log('SIP package successfully processed');
-
-        res.status(201).jsonp({
-            success: true,
-        });
-
-    } catch (error) {
-        if (tempFilePath && fs.existsSync(tempFilePath)) {
-            fs.unlinkSync(tempFilePath);
-        }
-        console.error('Error processing SIP:', error);
-        res.status(500).json({ 
-            error: 'Internal server error',
-            details: error.message 
-        });
-    }
-});
 
 function calculateSHA256(buffer) {
     return crypto.createHash('sha256').update(buffer).digest('hex');
@@ -326,7 +263,7 @@ async function reconstructDIP(metadataDoc) {
 
     // Add files and their metadata
     for (const fileId of metadataDoc.files) {
-        const fileInfo = await FileInfo.findById(fileId);
+        const fileInfo = await FileInfo.getFileInfoById(fileId);
         try {
             // Read file data
             const fileData = fs.readFileSync(fileInfo.file_path);
@@ -395,10 +332,76 @@ function generateSHA256(data) {
     }
 }
 
-router.get('/publications/visible', async (req, res) => {
+
+/* ROUTES */
+
+router.post('/ingest', verifyTokenSimple, upload.single('sip'), async (req, res) => {
+    let tempFilePath = req.file?.path;
+    
     try {
-        const metadataDocs = await Metadata.find({ visibility: 'public' })
-            .sort({ creationDate: -1 });
+        if (!req.file) {
+            console.log('No file uploaded')
+            return res.status(400).json({ error: 'No SIP package uploaded' });
+        }
+
+        const zipData = fs.readFileSync(tempFilePath);
+        const zip = await JSZip.loadAsync(zipData);
+        const zipFiles = Object.keys(zip.files);
+
+        if (!zipFiles.includes('manifesto-SIP.json')) {
+            console.log('Manifest file not found in SIP')
+            return res.status(400).json({ error: 'Manifest file not found in SIP' });
+        }
+
+        const manifestContent = await zip.file('manifesto-SIP.json').async('string');
+        const manifest = JSON.parse(manifestContent);
+
+        const submitter = manifest.submitter;
+        if (!submitter) {
+            console.log('Submitter information missing in manifest')
+            return res.status(400).json({ error: 'Submitter information missing in manifest' });
+        }
+
+        const userStoragePath = path.join(__dirname, '..', 'storage', 'temp', submitter);
+        fs.mkdirSync(userStoragePath, { recursive: true });
+
+        const verificationResults = await verifyFiles(zip, manifest, zipFiles);
+        
+        if (verificationResults.errors.length > 0) {
+            console.log('File verification failed', verificationResults.errors);
+            return res.status(400).json({
+                error: 'Some files failed verification',
+                details: verificationResults.errors
+            });
+        }
+
+        const storedFiles = await processAndStoreFiles(zip, manifest, userStoragePath, submitter);
+        
+        const metadataDoc = await storeMetadata(manifest, storedFiles, submitter);
+
+        fs.unlinkSync(tempFilePath);
+
+        console.log('SIP package successfully processed');
+
+        res.status(201).jsonp({
+            success: true,
+        });
+
+    } catch (error) {
+        if (tempFilePath && fs.existsSync(tempFilePath)) {
+            fs.unlinkSync(tempFilePath);
+        }
+        console.error('Error processing SIP:', error);
+        res.status(500).json({ 
+            error: 'Internal server error',
+            details: error.message 
+        });
+    }
+});
+
+router.get('/publications/visible', verifyTokenSimple, async (req, res) => {
+    try {
+        const metadataDocs = await Metadata.getMetadataPublic();
 
         // Create a zip containing all DIPs
         const masterZip = new JSZip();
@@ -418,11 +421,9 @@ router.get('/publications/visible', async (req, res) => {
     }
 });
 
-router.get('/publications/user/:username', async (req, res) => {
+router.get('/publications/user/:username', verifyTokenSimple, async (req, res) => {
     try {
-
-        const metadataDocs = await Metadata.find({user: req.params.username, visibility: 'public'})
-            .sort({ creationDate: -1 });
+        const metadataDocs = await Metadata.getMetadataUserPublic(req.params.username);
 
         // Create a zip containing all DIPs
         const masterZip = new JSZip();
@@ -442,10 +443,13 @@ router.get('/publications/user/:username', async (req, res) => {
     }
 });
 
-router.get('/publications/self/:username', async (req, res) => {
+router.get('/publications/self/:username', verifyTokenSimple, async (req, res) => {
     try {
-        const metadataDocs = await Metadata.find({user: req.params.username})
-            .sort({ creationDate: -1 });
+        if (req.params.username !== req.loggedUser.username && !req.loggedUser.role === 'admin') {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+
+        const metadataDocs = await Metadata.getMetadataByUser(req.params.username);
 
         // Create a zip containing all DIPs
         const masterZip = new JSZip();

@@ -5,6 +5,6 @@ const FileInfoSchema = new mongoose.Schema({
     file_path: { type: String, required: true },
     mimeType: { type: String, required: true },
     size: { type: Number, required: true }
-});
+}, { versionKey: false });
 
 module.exports = mongoose.model('fileInfo', FileInfoSchema);
