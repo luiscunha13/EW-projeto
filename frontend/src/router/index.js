@@ -9,7 +9,10 @@ import AdminHome from '../views/AdminHome.vue';
 import UserManagement from '../views/UserManagement.vue';
 import Logs from '../views/Logs.vue';
 import testPub from '@/views/testPub.vue';
-
+import Profile from '../views/Profile.vue';
+import NotFound from '../views/NotFound.vue'
+import EditPost from '@/views/EditPost.vue';
+import Metrics from '@/views/Metrics.vue';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -47,6 +50,24 @@ const router = createRouter({
       name: 'testPub',
       component: testPub
     },
+    {
+      path: '/profile/:username',
+      name: 'profile',
+      component: Profile,
+      //meta: { requiresAuth: true } // Rota que requer autenticação
+    },
+    {
+      path: '/editpost/:id',
+      name: 'editpost',
+      component: EditPost,
+      //meta: { requiresAuth: true } // Rota que requer autenticação
+    },
+    {
+      'path': '/metrics',
+      'name': 'metrics',
+      component: Metrics,
+      //meta: { requiresAuth: true } // Rota que requer autenticação
+    },
     
     // Exclusivo admin
     {
@@ -66,9 +87,12 @@ const router = createRouter({
       name: 'logs',
       component: Logs,
       //meta: { requiresAdmin: true } // Rota que requer autenticação de admin
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'NotFound',
+      component: NotFound,
     }
-
-    
   ]
 });
 

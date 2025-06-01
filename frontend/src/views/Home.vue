@@ -6,13 +6,13 @@
         <div class="logo">
           <img src="@/assets/logo.png" alt="Logo" class="logo" />
         </div>
-        <div class="user-info">
+        <router-link :to="`/profile/${currentUser.username}`" class="user-info">
           <div class="avatar">{{ userInitial }}</div>
           <div class="user-details">
             <h3>{{ currentUser.name }}</h3>
             <p>@{{ currentUser.username }}</p>
           </div>
-        </div>
+        </router-link>
         <nav class="navigation">
           <button class="nav-item active">
             <span>Home</span>
@@ -290,6 +290,8 @@ onMounted(async () => {
   margin-bottom: 20px;
   transition: background-color 0.2s;
   cursor: pointer;
+  text-decoration: none;
+  color: inherit;
 }
 
 .user-info:hover {
